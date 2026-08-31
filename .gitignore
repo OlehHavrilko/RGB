@@ -1,0 +1,16 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Flutter build output (на случай, если запускали сборку из корня)
+app/build/
+app/.dart_tool/
+
+# Claude Code local config
+.claude/
+
+# Локальные справочные материалы по контроллеру (не публиковать)
+nrf logs
+photo_*.jpg
