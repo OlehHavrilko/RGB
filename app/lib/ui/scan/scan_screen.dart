@@ -79,7 +79,8 @@ class _ScanScreenState extends State<ScanScreen> {
         ],
       ),
     );
-    if (ok ?? false) await context.read<DevicesManager>().forget(device.id);
+    if (!(ok ?? false) || !mounted) return;
+    await context.read<DevicesManager>().forget(device.id);
   }
 
   @override
