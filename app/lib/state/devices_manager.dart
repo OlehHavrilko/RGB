@@ -24,9 +24,21 @@ class DevicesManager extends ChangeNotifier {
   final Prefs _prefs;
   final Map<String, DeviceController> _controllers = {};
   final Map<String, ScheduleController> _schedules = {};
+  bool _syncEnabled = false;
 
   /// Известные устройства (когда-либо подключались), последнее — первым.
   List<KnownDevice> get knownDevices => _prefs.knownDevices;
+
+  /// Режим синхронизации: пока включён, действие на одном устройстве
+  /// (см. [broadcastFrom]) зеркалится на все остальные подключённые.
+  /// Хранится только в памяти — сбрасывается при перезапуске приложения.
+  bool get syncEnabled => _syncEnabled;
+
+  void setSyncEnabled(bool value) {
+    if (_syncEnabled == value) return;
+    _syncEnabled = value;
+    notifyListeners();
+  }
 
   /// Активные сессии — по одной на каждое известное устройство, независимо
   /// от того, подключены они сейчас или нет.
@@ -67,6 +79,20 @@ class DevicesManager extends ChangeNotifier {
     final ctrl = _ensureSession(id);
     await ctrl.connect();
     notifyListeners();
+  }
+
+  /// Если включён [syncEnabled], применяет [action] ко всем подключённым
+  /// устройствам, кроме [origin] (действие на самом [origin] вызывающий
+  /// код выполняет отдельно, до или после этого вызова). Ничего не делает,
+  /// если синхронизация выключена или подключено меньше двух устройств.
+  void broadcastFrom(
+    DeviceController origin,
+    void Function(DeviceController target) action,
+  ) {
+    if (!_syncEnabled) return;
+    for (final other in connectedSessions) {
+      if (other.id != origin.id) action(other);
+    }
   }
 
   /// Отключиться и полностью забыть устройство: рвём соединение, удаляем

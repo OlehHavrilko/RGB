@@ -72,5 +72,57 @@ void main() {
 
       expect(notified, isTrue);
     });
+
+    test('syncEnabled по умолчанию выключен и переключается', () async {
+      final manager = DevicesManager(await _newPrefs());
+      expect(manager.syncEnabled, isFalse);
+
+      var notified = false;
+      manager.addListener(() => notified = true);
+      manager.setSyncEnabled(true);
+
+      expect(manager.syncEnabled, isTrue);
+      expect(notified, isTrue);
+    });
+
+    test('повторная установка того же значения syncEnabled не оповещает', () async {
+      final manager = DevicesManager(await _newPrefs());
+      var notifications = 0;
+      manager.addListener(() => notifications++);
+
+      manager.setSyncEnabled(false); // уже false
+      expect(notifications, 0);
+
+      manager.setSyncEnabled(true);
+      manager.setSyncEnabled(true); // уже true
+      expect(notifications, 1);
+    });
+
+    test('broadcastFrom ничего не делает при выключенной синхронизации', () async {
+      final manager = DevicesManager(await _newPrefs());
+      final origin = manager.controllerFor('AA:AA');
+      manager.controllerFor('BB:BB');
+
+      var calls = 0;
+      manager.broadcastFrom(origin, (_) => calls++);
+
+      expect(calls, 0);
+    });
+
+    test(
+        'broadcastFrom при включённой синхронизации не трогает несоединённые '
+        'устройства (в тестах BLE не подключается по-настоящему)', () async {
+      final manager = DevicesManager(await _newPrefs());
+      manager.setSyncEnabled(true);
+      final origin = manager.controllerFor('AA:AA');
+      manager.controllerFor('BB:BB');
+
+      var calls = 0;
+      manager.broadcastFrom(origin, (_) => calls++);
+
+      // Ни одно из устройств не в состоянии connected, поэтому рассылка
+      // никого не задевает — это и есть ожидаемое поведение guard'а.
+      expect(calls, 0);
+    });
   });
 }

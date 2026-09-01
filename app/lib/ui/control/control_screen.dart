@@ -53,6 +53,18 @@ class ControlScreen extends StatelessWidget {
   }
 }
 
+/// Применяет [action] к [ctrl] и, если включён режим синхронизации
+/// ([DevicesManager.syncEnabled]), зеркалит его на все остальные
+/// подключённые устройства.
+void _apply(
+  BuildContext context,
+  DeviceController ctrl,
+  void Function(DeviceController target) action,
+) {
+  action(ctrl);
+  context.read<DevicesManager>().broadcastFrom(ctrl, action);
+}
+
 class _ControlScreenBody extends StatelessWidget {
   const _ControlScreenBody();
 
@@ -86,7 +98,7 @@ class _ControlScreenBody extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                   child: Column(
                     children: [
-                      _TopBar(deviceName: ctrl.name),
+                      _TopBar(ctrl: ctrl),
                       const SizedBox(height: 12),
                       ConnectionBanner(
                         state: ctrl.linkState,
@@ -101,12 +113,14 @@ class _ControlScreenBody extends StatelessWidget {
                       _PowerArea(
                         on: led.power,
                         glow: led.displayColor,
-                        onToggle: ctrl.togglePower,
+                        onToggle: () =>
+                            _apply(context, ctrl, (c) => c.togglePower()),
                       ),
                       const SizedBox(height: 28),
                       ModeSwitcher(
                         mode: led.mode,
-                        onChanged: ctrl.setMode,
+                        onChanged: (m) =>
+                            _apply(context, ctrl, (c) => c.setMode(m)),
                       ),
                       const SizedBox(height: 16),
                     ],
@@ -152,9 +166,10 @@ class _ControlScreenBody extends StatelessWidget {
                         child: BrightnessSlider(
                           value: led.brightness,
                           tint: led.displayColor,
-                          onChanged: (v) => ctrl.setBrightness(v),
-                          onChangeEnd: (v) =>
-                              ctrl.setBrightness(v, commit: true),
+                          onChanged: (v) =>
+                              _apply(context, ctrl, (c) => c.setBrightness(v)),
+                          onChangeEnd: (v) => _apply(context, ctrl,
+                              (c) => c.setBrightness(v, commit: true)),
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -172,12 +187,16 @@ class _ControlScreenBody extends StatelessWidget {
 }
 
 class _TopBar extends StatelessWidget {
-  const _TopBar({required this.deviceName});
+  const _TopBar({required this.ctrl});
 
-  final String deviceName;
+  final DeviceController ctrl;
 
   @override
   Widget build(BuildContext context) {
+    final manager = context.watch<DevicesManager>();
+    final otherConnected =
+        manager.connectedSessions.where((s) => s.id != ctrl.id).length;
+
     return Row(
       children: [
         Pressable(
@@ -201,7 +220,7 @@ class _TopBar extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                deviceName,
+                ctrl.name,
                 style: Theme.of(context).textTheme.headlineSmall,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -216,6 +235,15 @@ class _TopBar extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 10),
+        if (otherConnected > 0)
+          Padding(
+            padding: const EdgeInsets.only(right: 10),
+            child: _SyncToggle(
+              enabled: manager.syncEnabled,
+              otherConnected: otherConnected,
+              onTap: () => manager.setSyncEnabled(!manager.syncEnabled),
+            ),
+          ),
         Pressable(
           onTap: () => Navigator.of(context).push(
             FadeThroughPageRoute<void>(page: const SchedulesScreen()),
@@ -234,6 +262,72 @@ class _TopBar extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Переключатель режима синхронизации: пока активен, изменения на этом
+/// устройстве (цвет/эффект/яркость/питание) зеркалятся на все остальные
+/// подключённые ленты.
+class _SyncToggle extends StatelessWidget {
+  const _SyncToggle({
+    required this.enabled,
+    required this.otherConnected,
+    required this.onTap,
+  });
+
+  final bool enabled;
+  final int otherConnected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: enabled
+          ? 'Синхронизация включена: команды идут на все подключённые устройства'
+          : 'Включить синхронизацию с остальными подключёнными устройствами',
+      child: Pressable(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: AnimatedContainer(
+          duration: Motion.base,
+          height: 40,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: enabled
+                ? AppColors.accent.withValues(alpha: 0.22)
+                : AppColors.glass,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: enabled
+                  ? AppColors.accent.withValues(alpha: 0.6)
+                  : AppColors.hairline,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                enabled ? Icons.sync_rounded : Icons.sync_disabled_rounded,
+                size: 18,
+                color:
+                    enabled ? AppColors.accent : AppColors.textFaint,
+              ),
+              if (enabled) ...[
+                const SizedBox(width: 6),
+                Text(
+                  '+$otherConnected',
+                  style: const TextStyle(
+                    color: AppColors.accent,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -289,8 +383,10 @@ class _ModePanel extends StatelessWidget {
             GlassCard(
               child: WhiteTab(
                 warm: led.warm,
-                onChanged: (v) => ctrl.setWhite(v),
-                onChangeEnd: (v) => ctrl.setWhite(v, commit: true),
+                onChanged: (v) =>
+                    _apply(context, ctrl, (c) => c.setWhite(v)),
+                onChangeEnd: (v) => _apply(
+                    context, ctrl, (c) => c.setWhite(v, commit: true)),
               ),
             ),
           ],
@@ -304,9 +400,12 @@ class _ModePanel extends StatelessWidget {
               child: EffectsSection(
                 selectedId: led.effectId,
                 speed: led.effectSpeed,
-                onSelect: ctrl.selectEffect,
-                onSpeed: (v) => ctrl.setEffectSpeed(v),
-                onSpeedEnd: (v) => ctrl.setEffectSpeed(v, commit: true),
+                onSelect: (id) =>
+                    _apply(context, ctrl, (c) => c.selectEffect(id)),
+                onSpeed: (v) =>
+                    _apply(context, ctrl, (c) => c.setEffectSpeed(v)),
+                onSpeedEnd: (v) => _apply(
+                    context, ctrl, (c) => c.setEffectSpeed(v, commit: true)),
               ),
             ),
           ],
@@ -334,15 +433,19 @@ class _ColorPanel extends StatelessWidget {
                 child: ColorWheel(
                   color: led.color,
                   size: 250,
-                  onChanged: (c) => ctrl.setColor(c),
-                  onChangeEnd: (c) => ctrl.setColor(c, commit: true),
+                  onChanged: (color) =>
+                      _apply(context, ctrl, (c) => c.setColor(color)),
+                  onChangeEnd: (color) => _apply(
+                      context, ctrl, (c) => c.setColor(color, commit: true)),
                 ),
               ),
               const SizedBox(height: 22),
               RgbSliders(
                 color: led.color,
-                onChanged: (c) => ctrl.setColor(c),
-                onChangeEnd: (c) => ctrl.setColor(c, commit: true),
+                onChanged: (color) =>
+                    _apply(context, ctrl, (c) => c.setColor(color)),
+                onChangeEnd: (color) => _apply(
+                    context, ctrl, (c) => c.setColor(color, commit: true)),
               ),
               const SizedBox(height: 18),
               Wrap(
@@ -351,7 +454,8 @@ class _ColorPanel extends StatelessWidget {
                 children: [
                   for (final c in _ControlScreenBody._quickColors)
                     Pressable(
-                      onTap: () => ctrl.setColor(c, commit: true),
+                      onTap: () => _apply(
+                          context, ctrl, (t) => t.setColor(c, commit: true)),
                       borderRadius: BorderRadius.circular(20),
                       child: Container(
                         width: 34,
