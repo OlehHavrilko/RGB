@@ -7,11 +7,16 @@ Windows на одном коде (Flutter).
 [![CI](https://github.com/OlehHavrilko/RGB/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/OlehHavrilko/RGB/actions/workflows/ci.yml)
 [![Android APK](https://github.com/OlehHavrilko/RGB/actions/workflows/android-apk.yml/badge.svg)](https://github.com/OlehHavrilko/RGB/actions/workflows/android-apk.yml)
 [![Windows installer](https://github.com/OlehHavrilko/RGB/actions/workflows/windows-installer.yml/badge.svg)](https://github.com/OlehHavrilko/RGB/actions/workflows/windows-installer.yml)
+[![Latest release](https://img.shields.io/github/v/release/OlehHavrilko/RGB?label=latest%20release)](https://github.com/OlehHavrilko/RGB/releases/latest)
 
 ## Скачать
 
-- **Android** — `.apk` из последнего прогона workflow [Android APK](https://github.com/OlehHavrilko/RGB/actions/workflows/android-apk.yml) (вкладка Artifacts) или из [Releases](https://github.com/OlehHavrilko/RGB/releases), если собран релизный тег.
-- **Windows** — инсталлятор `Chromify-Setup-x64.exe` из последнего прогона workflow [Windows installer](https://github.com/OlehHavrilko/RGB/actions/workflows/windows-installer.yml) или из [Releases](https://github.com/OlehHavrilko/RGB/releases).
+**[⬇ Последний релиз](https://github.com/OlehHavrilko/RGB/releases/latest)** — `.apk` для Android и `Chromify-Setup-x64.exe` для Windows одним кликом.
+
+Свежее (но без стабильного номера версии) можно взять и прямо из CI:
+
+- **Android** — `.apk` из последнего прогона workflow [Android APK](https://github.com/OlehHavrilko/RGB/actions/workflows/android-apk.yml) (вкладка Artifacts).
+- **Windows** — инсталлятор из последнего прогона workflow [Windows installer](https://github.com/OlehHavrilko/RGB/actions/workflows/windows-installer.yml).
 
 ## Возможности (кратко)
 
