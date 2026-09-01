@@ -9,6 +9,7 @@ import 'ble/ble_service.dart';
 import 'l10n/app_locale.dart';
 import 'l10n/locale_controller.dart';
 import 'state/devices_manager.dart';
+import 'state/openrgb_controller.dart';
 import 'state/prefs.dart';
 import 'state/scan_controller.dart';
 import 'widget/home_widget_gateway.dart';
@@ -34,6 +35,9 @@ Future<void> main() async {
         ),
         ChangeNotifierProvider<DevicesManager>(
           create: (_) => DevicesManager(prefs),
+        ),
+        ChangeNotifierProvider<OpenRgbController>(
+          create: (_) => OpenRgbController(prefs),
         ),
       ],
       child: LocaleControllerScope(

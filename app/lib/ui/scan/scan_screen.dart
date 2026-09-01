@@ -15,6 +15,7 @@ import '../../state/devices_manager.dart';
 import '../../state/known_device.dart';
 import '../../state/scan_controller.dart';
 import '../control/control_screen.dart';
+import '../pc/pc_screen.dart';
 import '../scenes/scenes_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/motion.dart';
@@ -133,6 +134,24 @@ class _ScanScreenState extends State<ScanScreen> {
                           border: Border.all(color: AppColors.hairline),
                         ),
                         child: const Icon(Icons.auto_awesome_rounded,
+                            color: AppColors.textPrimary, size: 20),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Pressable(
+                      onTap: () => Navigator.of(context).push(
+                        FadeThroughPageRoute<void>(page: const PcScreen()),
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: AppColors.glass,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppColors.hairline),
+                        ),
+                        child: const Icon(Icons.desktop_windows_rounded,
                             color: AppColors.textPrimary, size: 20),
                       ),
                     ),

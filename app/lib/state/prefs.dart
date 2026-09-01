@@ -21,6 +21,8 @@ class Prefs {
   static const _kSchedulesPrefix = 'schedules_v1:';
   static const _kSunriseAlarmsPrefix = 'sunrise_alarms_v1:';
   static const _kLocale = 'locale_v1';
+  static const _kOpenRgbHost = 'openrgb_host_v1';
+  static const _kOpenRgbPort = 'openrgb_port_v1';
 
   // ───────────────────────────── известные устройства ──────────────────────
 
@@ -122,4 +124,14 @@ class Prefs {
   String? get localeCode => _prefs.getString(_kLocale);
 
   Future<void> setLocaleCode(String code) => _prefs.setString(_kLocale, code);
+
+  // ────────────────────────────── OpenRGB (ПК) ──────────────────────────────
+
+  String? get openRgbHost => _prefs.getString(_kOpenRgbHost);
+  int? get openRgbPort => _prefs.getInt(_kOpenRgbPort);
+
+  Future<void> setOpenRgbEndpoint(String host, int port) async {
+    await _prefs.setString(_kOpenRgbHost, host);
+    await _prefs.setInt(_kOpenRgbPort, port);
+  }
 }
