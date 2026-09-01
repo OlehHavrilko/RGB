@@ -13,6 +13,8 @@ class Prefs {
   static const _kLastDeviceName = 'last_device_name';
   static const _kPresets = 'presets_v1';
   static const _kLastState = 'last_led_state_v1';
+  static const _kSleepAt = 'sleep_at_epoch_ms';
+  static const _kSchedules = 'schedules_v1';
 
   String? get lastDeviceId => _prefs.getString(_kLastDeviceId);
   String? get lastDeviceName => _prefs.getString(_kLastDeviceName);
@@ -42,4 +44,25 @@ class Prefs {
 
   Future<void> setLastStateRaw(String raw) =>
       _prefs.setString(_kLastState, raw);
+
+  // ──────────────────────────── таймер сна ────────────────────────────────
+
+  /// Абсолютное время автоотключения (epoch ms) либо `null`.
+  int? get sleepAtEpochMs => _prefs.getInt(_kSleepAt);
+
+  Future<void> setSleepAtEpochMs(int? value) async {
+    if (value == null) {
+      await _prefs.remove(_kSleepAt);
+    } else {
+      await _prefs.setInt(_kSleepAt, value);
+    }
+  }
+
+  // ─────────────────────────── расписание ─────────────────────────────────
+
+  List<String> get schedulesRaw =>
+      _prefs.getStringList(_kSchedules) ?? const <String>[];
+
+  Future<void> setSchedulesRaw(List<String> raw) =>
+      _prefs.setStringList(_kSchedules, raw);
 }

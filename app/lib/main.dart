@@ -7,6 +7,7 @@ import 'ble/ble_service.dart';
 import 'state/device_controller.dart';
 import 'state/prefs.dart';
 import 'state/scan_controller.dart';
+import 'state/schedule_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,6 +15,7 @@ Future<void> main() async {
 
   final prefs = await Prefs.load();
   final ble = BleService();
+  final device = DeviceController(prefs);
 
   runApp(
     MultiProvider(
@@ -23,8 +25,9 @@ Future<void> main() async {
         ChangeNotifierProvider<ScanController>(
           create: (_) => ScanController(ble),
         ),
-        ChangeNotifierProvider<DeviceController>(
-          create: (_) => DeviceController(prefs),
+        ChangeNotifierProvider<DeviceController>.value(value: device),
+        ChangeNotifierProvider<ScheduleController>(
+          create: (_) => ScheduleController(prefs, device),
         ),
       ],
       child: const RgbControllerApp(),
