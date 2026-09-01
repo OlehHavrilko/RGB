@@ -1,5 +1,5 @@
-name: rgb_controller
-description: "Управление RGB-лентой через BLE-контроллер ELK-BLEDOM."
+name: chromify
+description: "Chromify — управление RGB-лентой через BLE-контроллер ELK-BLEDOM."
 publish_to: 'none'
 
 version: 1.0.0+1

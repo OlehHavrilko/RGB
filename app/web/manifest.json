@@ -1,11 +1,11 @@
 {
-    "name": "rgb_controller",
-    "short_name": "rgb_controller",
+    "name": "Chromify",
+    "short_name": "Chromify",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0B0B18",
     "theme_color": "#6C7BFF",
-    "description": "A new Flutter project.",
+    "description": "Chromify — управление RGB-лентой через BLE-контроллер ELK-BLEDOM.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:rgb_controller/protocol/elk_bledom_codec.dart';
+import 'package:chromify/protocol/elk_bledom_codec.dart';
 
 /// Ожидаемые байты сверены с несколькими независимыми реверс-инжинирингами
 /// протокола ELK-BLEDOM.

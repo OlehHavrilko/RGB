@@ -1,4 +1,4 @@
-package com.oleh.rgb_controller
+package com.oleh.chromify
 
 import io.flutter.embedding.android.FlutterActivity
 

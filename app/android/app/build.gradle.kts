@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.oleh.rgb_controller"
+    namespace = "com.oleh.chromify"
     // permission_handler_android requires compileSdk 37; flutter.compileSdkVersion is still 36.
     compileSdk = 37
     ndkVersion = flutter.ndkVersion
@@ -17,7 +17,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.oleh.rgb_controller"
+        applicationId = "com.oleh.chromify"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

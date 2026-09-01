@@ -62,17 +62,17 @@ jobs:
 
       - name: Compile installer
         shell: pwsh
-        run: iscc /DMyAppVersion=${{ steps.ver.outputs.version }} installer\rgb-control.iss
+        run: iscc /DMyAppVersion=${{ steps.ver.outputs.version }} installer\chromify.iss
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
-          name: RGB-Control-Setup-x64
-          path: dist/RGB-Control-Setup-x64.exe
+          name: Chromify-Setup-x64
+          path: dist/Chromify-Setup-x64.exe
           if-no-files-found: error
 
       - name: Attach installer to release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/RGB-Control-Setup-x64.exe
+          files: dist/Chromify-Setup-x64.exe

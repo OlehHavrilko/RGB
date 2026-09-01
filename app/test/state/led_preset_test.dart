@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:rgb_controller/state/led_preset.dart';
-import 'package:rgb_controller/state/led_state.dart';
+import 'package:chromify/state/led_preset.dart';
+import 'package:chromify/state/led_state.dart';
 
 void main() {
   group('LedState сериализация', () {

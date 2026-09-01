@@ -30,7 +30,7 @@ Future<void> main() async {
           create: (_) => ScheduleController(prefs, device),
         ),
       ],
-      child: const RgbControllerApp(),
+      child: const ChromifyApp(),
     ),
   );
 }

@@ -1,4 +1,4 @@
-# RGB Control
+# Chromify
 
 Приложение для управления RGB-лентой через BLE-контроллер **ELK-BLEDOM**.
 Flutter, один код для Windows и Android. Первый этап — Windows.
@@ -98,7 +98,7 @@ flutter build windows --release
 > странности со сборкой — скопируйте папку `app` на диск `C:` и соберите
 > оттуда.
 
-## Инсталлятор (RGB-Control-Setup-x64.exe)
+## Инсталлятор (Chromify-Setup-x64.exe)
 
 ### Через GitHub Actions (без Windows-машины)
 
@@ -109,7 +109,7 @@ Workflow `.github/workflows/windows-installer.yml` собирает релиз �
 - по тегу: `git tag v1.0.0 && git push --tags` — инсталлятор дополнительно
   прикрепляется к GitHub Release.
 
-Готовый `RGB-Control-Setup-x64.exe` лежит в артефактах прогона.
+Готовый `Chromify-Setup-x64.exe` лежит в артефактах прогона.
 
 ### Локально на Windows
 
@@ -118,7 +118,7 @@ Workflow `.github/workflows/windows-installer.yml` собирает релиз �
 
 ```powershell
 .\scripts\build_windows.ps1
-# результат: dist\RGB-Control-Setup-x64.exe
+# результат: dist\Chromify-Setup-x64.exe
 ```
 
 Инсталлятор ставит приложение per-user (без прав администратора),

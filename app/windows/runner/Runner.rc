@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "Oleh Havrilko" "\0"
-            VALUE "FileDescription", "RGB Control" "\0"
+            VALUE "FileDescription", "Chromify" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "RGB Control" "\0"
+            VALUE "InternalName", "Chromify" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 Oleh Havrilko. All rights reserved." "\0"
-            VALUE "OriginalFilename", "rgb_controller.exe" "\0"
-            VALUE "ProductName", "RGB Control" "\0"
+            VALUE "OriginalFilename", "chromify.exe" "\0"
+            VALUE "ProductName", "Chromify" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
