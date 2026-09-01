@@ -1,5 +1,6 @@
 import 'package:chromify/state/devices_manager.dart';
 import 'package:chromify/state/prefs.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -123,6 +124,63 @@ void main() {
       // Ни одно из устройств не в состоянии connected, поэтому рассылка
       // никого не задевает — это и есть ожидаемое поведение guard'а.
       expect(calls, 0);
+    });
+
+    test('saveScene снимает состояние указанных устройств и applyScene его возвращает',
+        () async {
+      final manager = DevicesManager(await _newPrefs());
+      final a = manager.controllerFor('AA:AA', name: 'Лента 1');
+      final b = manager.controllerFor('BB:BB', name: 'Лента 2');
+      a.setColor(const Color(0xFFFF0000), commit: true);
+      a.setPower(true);
+      b.setColor(const Color(0xFF00FF00), commit: true);
+      b.setPower(false);
+
+      await manager.saveScene('Вечер', ['AA:AA', 'BB:BB']);
+      expect(manager.scenes, hasLength(1));
+      final scene = manager.scenes.single;
+      expect(scene.name, 'Вечер');
+      expect(scene.entries, hasLength(2));
+
+      // Меняем состояние на другое, потом применяем сцену — должно вернуть,
+      // включая питание (a была включена, b — выключена).
+      a.setColor(const Color(0xFF0000FF), commit: true);
+      a.setPower(false);
+      b.setPower(true);
+      manager.applyScene(scene.id);
+
+      expect(a.led.color, const Color(0xFFFF0000));
+      expect(a.led.power, isTrue);
+      expect(b.led.color, const Color(0xFF00FF00));
+      expect(b.led.power, isFalse);
+    });
+
+    test('saveScene с пустым именем или без известных устройств ничего не создаёт',
+        () async {
+      final manager = DevicesManager(await _newPrefs());
+      manager.controllerFor('AA:AA');
+
+      await manager.saveScene('   ', ['AA:AA']);
+      expect(manager.scenes, isEmpty);
+
+      await manager.saveScene('Сцена', ['ZZ:ZZ']); // нет такой сессии
+      expect(manager.scenes, isEmpty);
+    });
+
+    test('deleteScene убирает сцену', () async {
+      final manager = DevicesManager(await _newPrefs());
+      manager.controllerFor('AA:AA');
+      await manager.saveScene('Сцена', ['AA:AA']);
+      final id = manager.scenes.single.id;
+
+      await manager.deleteScene(id);
+
+      expect(manager.scenes, isEmpty);
+    });
+
+    test('applyScene на неизвестный id ничего не ломает', () async {
+      final manager = DevicesManager(await _newPrefs());
+      expect(() => manager.applyScene('нет такой'), returnsNormally);
     });
   });
 }

@@ -4,6 +4,7 @@ import '../ble/ble_device.dart';
 import 'device_controller.dart';
 import 'known_device.dart';
 import 'prefs.dart';
+import 'scene.dart';
 import 'schedule_controller.dart';
 
 /// Держит по одной паре [DeviceController]/[ScheduleController] на каждое
@@ -93,6 +94,63 @@ class DevicesManager extends ChangeNotifier {
     for (final other in connectedSessions) {
       if (other.id != origin.id) action(other);
     }
+  }
+
+  // ──────────────────────────────── сцены ───────────────────────────────
+
+  /// Сохранённые сцены — снимки состояний нескольких устройств сразу.
+  List<Scene> get scenes =>
+      _prefs.scenesRaw.map(Scene.decode).whereType<Scene>().toList();
+
+  /// Сохраняет текущее состояние каждого из [deviceIds] как новую сцену
+  /// с именем [name]. Устройства без известной сессии пропускаются.
+  Future<void> saveScene(String name, Iterable<String> deviceIds) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+    final entries = <SceneEntry>[];
+    for (final id in deviceIds) {
+      final ctrl = _controllers[id];
+      if (ctrl == null) continue;
+      entries.add(
+        SceneEntry(deviceId: id, deviceName: ctrl.name, state: ctrl.led),
+      );
+    }
+    if (entries.isEmpty) return;
+    final scene = Scene(
+      id: DateTime.now().microsecondsSinceEpoch.toRadixString(36),
+      name: trimmed,
+      entries: entries,
+    );
+    await _prefs.setScenesRaw([
+      ...scenes.map((s) => s.encode()),
+      scene.encode(),
+    ]);
+    notifyListeners();
+  }
+
+  /// Применяет сцену: для каждого её устройства с активной сессией
+  /// переносит сохранённое состояние целиком, включая питание — в отличие
+  /// от обычного пресета, сцена должна честно воспроизвести, какие ленты
+  /// были включены, а какие выключены. Устройства, которых сейчас нет
+  /// среди известных, пропускаются.
+  void applyScene(String id) {
+    Scene? scene;
+    for (final s in scenes) {
+      if (s.id == id) scene = s;
+    }
+    if (scene == null) return;
+    for (final entry in scene.entries) {
+      final ctrl = _controllers[entry.deviceId];
+      if (ctrl == null) continue;
+      ctrl.applyLedState(entry.state);
+      ctrl.setPower(entry.state.power);
+    }
+  }
+
+  Future<void> deleteScene(String id) async {
+    final next = scenes.where((s) => s.id != id).toList();
+    await _prefs.setScenesRaw(next.map((s) => s.encode()).toList());
+    notifyListeners();
   }
 
   /// Отключиться и полностью забыть устройство: рвём соединение, удаляем

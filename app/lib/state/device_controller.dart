@@ -276,9 +276,13 @@ class DeviceController extends ChangeNotifier {
 
   /// Применить пресет: переносит режим/цвет/яркость/эффект (питание не
   /// трогаем) и, если лента включена, сразу шлёт команды на контроллер.
-  void applyPreset(LedPreset preset) {
+  void applyPreset(LedPreset preset) => applyLedState(preset.state);
+
+  /// Как [applyPreset], но принимает состояние напрямую — используется
+  /// сценами, где на разных устройствах применяются разные состояния
+  /// одним действием (см. `DevicesManager.applyScene`).
+  void applyLedState(LedState s) {
     _touch();
-    final s = preset.state;
     _led = _led.copyWith(
       color: s.color,
       brightness: s.brightness,
