@@ -3,14 +3,17 @@ import 'package:provider/provider.dart';
 
 import '../../state/daily_schedule.dart';
 import '../../state/schedule_controller.dart';
+import '../../state/sunrise_alarm.dart';
 import '../theme/app_colors.dart';
 import '../widgets/ambient_background.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/pressable.dart';
+import '../widgets/section_header.dart';
 
 const _dayLabels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
-/// Экран ежедневных расписаний включения/выключения ленты.
+/// Экран ежедневных расписаний включения/выключения ленты и
+/// будильников-рассветов.
 class SchedulesScreen extends StatelessWidget {
   const SchedulesScreen({super.key});
 
@@ -18,6 +21,7 @@ class SchedulesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final sched = context.watch<ScheduleController>();
     final items = sched.schedules;
+    final alarms = sched.sunriseAlarms;
 
     return Scaffold(
       body: AmbientBackground(
@@ -55,25 +59,52 @@ class SchedulesScreen extends StatelessWidget {
                 ),
               ),
               Expanded(
-                child: items.isEmpty
-                    ? const _Empty()
-                    : ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
-                        itemCount: items.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 12),
-                        itemBuilder: (_, i) => _ScheduleTile(item: items[i]),
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
+                  children: [
+                    SectionHeader(
+                      'Включение / выключение',
+                      trailing: _AddButton(
+                        onTap: () => _addDialog(context, sched),
                       ),
+                    ),
+                    if (items.isEmpty)
+                      const _Empty(
+                        icon: Icons.schedule_rounded,
+                        title: 'Нет расписаний',
+                        text: 'Добавьте автоматическое включение\n'
+                            'или выключение по времени',
+                      )
+                    else
+                      for (final item in items) ...[
+                        _ScheduleTile(item: item),
+                        const SizedBox(height: 12),
+                      ],
+                    const SizedBox(height: 24),
+                    SectionHeader(
+                      'Будильник-рассвет',
+                      trailing: _AddButton(
+                        onTap: () => _addSunriseDialog(context, sched),
+                      ),
+                    ),
+                    if (alarms.isEmpty)
+                      const _Empty(
+                        icon: Icons.wb_twilight_rounded,
+                        title: 'Нет будильников',
+                        text: 'Лента плавно наберёт яркость к нужному '
+                            'времени вместо резкого включения',
+                      )
+                    else
+                      for (final alarm in alarms) ...[
+                        _SunriseTile(alarm: alarm),
+                        const SizedBox(height: 12),
+                      ],
+                  ],
+                ),
               ),
             ],
           ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _addDialog(context, sched),
-        backgroundColor: AppColors.accent,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Добавить'),
       ),
     );
   }
@@ -108,6 +139,126 @@ class SchedulesScreen extends StatelessWidget {
     await sched.addSchedule(
       minuteOfDay: picked.hour * 60 + picked.minute,
       turnOn: turnOn,
+    );
+  }
+
+  Future<void> _addSunriseDialog(
+      BuildContext context, ScheduleController sched) async {
+    final now = TimeOfDay.now();
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: now,
+      helpText: 'Время окончания рассвета',
+    );
+    if (picked == null || !context.mounted) return;
+    final result = await showDialog<({int duration, int brightness})>(
+      context: context,
+      builder: (context) => _SunriseSettingsDialog(time: picked),
+    );
+    if (result == null) return;
+    await sched.addSunriseAlarm(
+      minuteOfDay: picked.hour * 60 + picked.minute,
+      durationMinutes: result.duration,
+      targetBrightness: result.brightness,
+    );
+  }
+}
+
+class _AddButton extends StatelessWidget {
+  const _AddButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Pressable(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.glass,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.hairline),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.add_rounded, size: 16, color: AppColors.textPrimary),
+            SizedBox(width: 4),
+            Text(
+              'Добавить',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Диалог настройки будильника-рассвета: длительность и целевая яркость.
+class _SunriseSettingsDialog extends StatefulWidget {
+  const _SunriseSettingsDialog({required this.time});
+
+  final TimeOfDay time;
+
+  @override
+  State<_SunriseSettingsDialog> createState() =>
+      _SunriseSettingsDialogState();
+}
+
+class _SunriseSettingsDialogState extends State<_SunriseSettingsDialog> {
+  int _duration = 15;
+  int _brightness = 80;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: AppColors.bgElevated,
+      title: Text('Рассвет к ${widget.time.format(context)}'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Длительность: $_duration мин',
+              style: const TextStyle(color: AppColors.textFaint)),
+          Slider(
+            value: _duration.toDouble(),
+            min: 5,
+            max: 60,
+            divisions: 11,
+            activeColor: AppColors.accent,
+            onChanged: (v) => setState(() => _duration = v.round()),
+          ),
+          Text('Целевая яркость: $_brightness%',
+              style: const TextStyle(color: AppColors.textFaint)),
+          Slider(
+            value: _brightness.toDouble(),
+            min: 10,
+            max: 100,
+            divisions: 18,
+            activeColor: AppColors.accent,
+            onChanged: (v) => setState(() => _brightness = v.round()),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Отмена'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(
+            (duration: _duration, brightness: _brightness),
+          ),
+          child: const Text('Сохранить'),
+        ),
+      ],
     );
   }
 }
@@ -207,6 +358,95 @@ class _ScheduleTile extends StatelessWidget {
   }
 }
 
+class _SunriseTile extends StatelessWidget {
+  const _SunriseTile({required this.alarm});
+
+  final SunriseAlarm alarm;
+
+  @override
+  Widget build(BuildContext context) {
+    final sched = context.read<ScheduleController>();
+    final dim = !alarm.enabled;
+
+    return GlassCard(
+      padding: const EdgeInsets.fromLTRB(18, 14, 12, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Opacity(
+                opacity: dim ? 0.4 : 1,
+                child: Row(
+                  children: [
+                    const Icon(Icons.wb_twilight_rounded,
+                        size: 20, color: AppColors.accentSoft),
+                    const SizedBox(width: 12),
+                    Text(
+                      alarm.timeLabel,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 22,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'за ${alarm.durationMinutes} мин → '
+                      '${alarm.targetBrightness}%',
+                      style: const TextStyle(
+                        color: AppColors.textFaint,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              Switch(
+                value: alarm.enabled,
+                activeThumbColor: AppColors.accent,
+                onChanged: (_) => sched.toggleSunriseAlarm(alarm.id),
+              ),
+              Pressable(
+                onTap: () => sched.deleteSunriseAlarm(alarm.id),
+                borderRadius: BorderRadius.circular(12),
+                child: const Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Icon(Icons.delete_outline_rounded,
+                      size: 20, color: AppColors.textFaint),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Opacity(
+            opacity: dim ? 0.4 : 1,
+            child: Wrap(
+              spacing: 8,
+              children: [
+                for (var d = 1; d <= 7; d++)
+                  _DayToggle(
+                    label: _dayLabels[d - 1],
+                    active: alarm.days.contains(d),
+                    onTap: () {
+                      final next = {...alarm.days};
+                      if (!next.remove(d)) next.add(d);
+                      if (next.isEmpty) return;
+                      sched.updateSunriseAlarm(alarm.copyWith(days: next));
+                    },
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _DayToggle extends StatelessWidget {
   const _DayToggle({
     required this.label,
@@ -248,24 +488,26 @@ class _DayToggle extends StatelessWidget {
 }
 
 class _Empty extends StatelessWidget {
-  const _Empty();
+  const _Empty({required this.icon, required this.title, required this.text});
+
+  final IconData icon;
+  final String title;
+  final String text;
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.schedule_rounded,
-              size: 56, color: AppColors.textFaint),
-          const SizedBox(height: 16),
-          Text('Нет расписаний',
-              style: Theme.of(context).textTheme.titleMedium),
+          Icon(icon, size: 40, color: AppColors.textFaint),
+          const SizedBox(height: 12),
+          Text(title, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 6),
-          const Text(
-            'Добавьте автоматическое включение\nили выключение по времени',
+          Text(
+            text,
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.textFaint, height: 1.5),
+            style: const TextStyle(color: AppColors.textFaint, height: 1.5),
           ),
         ],
       ),
