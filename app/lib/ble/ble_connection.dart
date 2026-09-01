@@ -44,6 +44,10 @@ class ElkConnection {
 
   static const _maxBackoff = Duration(seconds: 20);
 
+  /// Сколько раз пробуем переподключиться, если после connect не удалось
+  /// найти характеристику записи (сервис-кэш иногда пуст сразу после connect).
+  static const _maxDiscoverRetries = 3;
+
   void _setState(LinkState s) {
     if (_disposed || _current == s) return;
     _current = s;
@@ -81,8 +85,7 @@ class ElkConnection {
       final services = await UniversalBle.discoverServices(deviceId);
       final write = ElkEndpoints.resolveWrite(services);
       if (write == null) {
-        debugPrint('ElkConnection: write characteristic not found');
-        _setState(LinkState.failed);
+        _handleDiscoveryFailure('write characteristic not found');
         return;
       }
       _writeService = write.service;
@@ -109,9 +112,22 @@ class ElkConnection {
       _attempt = 0;
       _setState(LinkState.connected);
     } catch (e) {
-      debugPrint('ElkConnection discover error: $e');
-      _setState(LinkState.failed);
+      _handleDiscoveryFailure('discover error: $e');
     }
+  }
+
+  /// Discovery не удалась: пока не исчерпан лимит — переподключаемся с
+  /// нарастающей задержкой, иначе окончательно [LinkState.failed].
+  void _handleDiscoveryFailure(String why) {
+    debugPrint('ElkConnection: $why');
+    if (_manualDisconnect || _disposed) return;
+    if (_attempt >= _maxDiscoverRetries) {
+      _setState(LinkState.failed);
+      return;
+    }
+    unawaited(UniversalBle.disconnect(deviceId).catchError((_) {}));
+    _setState(LinkState.reconnecting);
+    _scheduleReconnect();
   }
 
   void _onNotify(Uint8List value) {

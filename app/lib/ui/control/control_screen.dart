@@ -14,9 +14,13 @@ import 'brightness_slider.dart';
 import 'color_wheel.dart';
 import 'connection_banner.dart';
 import 'effects_section.dart';
+import '../schedules/schedules_screen.dart';
+import '../widgets/app_page_transition.dart';
 import 'mode_switcher.dart';
 import 'power_orb.dart';
+import 'presets_section.dart';
 import 'rgb_sliders.dart';
+import 'sleep_timer_section.dart';
 import 'white_tab.dart';
 
 class ControlScreen extends StatelessWidget {
@@ -111,6 +115,8 @@ class ControlScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      const PresetsSection(),
+                      const SizedBox(height: 20),
                       const SectionHeader('Яркость'),
                       GlassCard(
                         child: BrightnessSlider(
@@ -121,6 +127,8 @@ class ControlScreen extends StatelessWidget {
                               ctrl.setBrightness(v, commit: true),
                         ),
                       ),
+                      const SizedBox(height: 20),
+                      const SleepTimerSection(),
                     ],
                   ),
                 ),
@@ -175,6 +183,24 @@ class _TopBar extends StatelessWidget {
                     fontWeight: FontWeight.w500),
               ),
             ],
+          ),
+        ),
+        const SizedBox(width: 10),
+        Pressable(
+          onTap: () => Navigator.of(context).push(
+            FadeThroughPageRoute<void>(page: const SchedulesScreen()),
+          ),
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.glass,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.hairline),
+            ),
+            child: const Icon(Icons.schedule_rounded,
+                color: AppColors.textPrimary, size: 20),
           ),
         ),
       ],

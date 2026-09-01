@@ -8,6 +8,9 @@ Thumbs.db
 app/build/
 app/.dart_tool/
 
+# Собранный инсталлер
+dist/
+
 # Claude Code local config
 .claude/
 
