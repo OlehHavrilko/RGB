@@ -199,6 +199,34 @@ class AppStrings {
 
   String _deviceWordEn(int n) => n == 1 ? 'device' : 'devices';
 
+  // ───────────────────────────────────── ПК ───────────────────────────────
+
+  String get pcTitle => _t('ПК (OpenRGB)', 'PC (OpenRGB)');
+  String get pcHost => _t('Адрес (IP)', 'Host (IP)');
+  String get pcPort => _t('Порт', 'Port');
+  String get pcConnect => _t('Подключиться', 'Connect');
+  String get pcDisconnect => _t('Отключиться', 'Disconnect');
+  String get pcConnecting => _t('Подключение…', 'Connecting…');
+  String pcConnected(int count) => _t(
+      'Подключено. Устройств на сервере: $count',
+      'Connected. Devices on server: $count');
+  String pcConnectFailed(String detail) =>
+      _t('Не удалось подключиться: $detail', 'Failed to connect: $detail');
+  String get pcDeviceIndex => _t('Индекс устройства', 'Device index');
+  String get pcLedCount => _t('Число светодиодов', 'LED count');
+  String get pcApply => _t('Применить цвет', 'Apply color');
+  String get pcColorSent => _t('Цвет отправлен', 'Color sent');
+  String get pcExperimentalNotice => _t(
+      'Экспериментально: подключается к OpenRGB SDK Server (порт по '
+          'умолчанию 6742), запущенному на компьютере в той же сети. Не '
+          'тестировалось против реального сервера — список устройств и '
+          'зон OpenRGB не считывается, число светодиодов нужно указать '
+          'вручную.',
+      'Experimental: connects to an OpenRGB SDK Server (default port '
+          '6742) running on a computer on the same network. Not tested '
+          'against a real server — OpenRGB\'s device/zone list isn\'t read, '
+          'so the LED count must be entered manually.');
+
   // ───────────────────────────────── эффекты ──────────────────────────────
 
   static const Map<String, String> _effectNamesEn = {
