@@ -11,6 +11,7 @@ import 'l10n/locale_controller.dart';
 import 'state/devices_manager.dart';
 import 'state/prefs.dart';
 import 'state/scan_controller.dart';
+import 'widget/home_widget_gateway.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,7 +38,7 @@ Future<void> main() async {
       ],
       child: LocaleControllerScope(
         controller: localeController,
-        child: const ChromifyApp(),
+        child: const HomeWidgetGateway(child: ChromifyApp()),
       ),
     ),
   );
