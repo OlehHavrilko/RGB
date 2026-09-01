@@ -1,10 +1,10 @@
-; Inno Setup — инсталлятор RGB Control (Windows x64).
-; Сборка: iscc /DMyAppVersion=1.0.0 installer\rgb-control.iss
+; Inno Setup — инсталлятор Chromify (Windows x64).
+; Сборка: iscc /DMyAppVersion=1.0.0 installer\chromify.iss
 ; Перед этим должен быть выполнен `flutter build windows --release` в app/.
 
-#define MyAppName "RGB Control"
+#define MyAppName "Chromify"
 #define MyAppPublisher "Oleh Havrilko"
-#define MyAppExeName "rgb_controller.exe"
+#define MyAppExeName "chromify.exe"
 #define MyAppUrl "https://github.com/OlehHavrilko/RGB"
 
 #ifndef MyAppVersion
@@ -15,19 +15,19 @@
 #endif
 
 [Setup]
-AppId={{A3F5C1E2-9B47-4D8A-B6E0-1C2D3E4F5A6B}
+AppId={{78D96576-3C6E-4631-BC9D-1B33479EF448}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppUrl}
 AppSupportURL={#MyAppUrl}
-DefaultDirName={autopf}\RGB Control
-DefaultGroupName=RGB Control
+DefaultDirName={autopf}\Chromify
+DefaultGroupName=Chromify
 DisableProgramGroupPage=yes
 UninstallDisplayName={#MyAppName}
 UninstallDisplayIcon={app}\{#MyAppExeName}
 OutputDir=..\dist
-OutputBaseFilename=RGB-Control-Setup-x64
+OutputBaseFilename=Chromify-Setup-x64
 SetupIconFile=..\app\windows\runner\resources\app_icon.ico
 Compression=lzma2
 SolidCompression=yes
@@ -48,9 +48,9 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
 
 [Icons]
-Name: "{group}\RGB Control"; Filename: "{app}\{#MyAppExeName}"
-Name: "{group}\{cm:UninstallProgram,RGB Control}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\RGB Control"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{group}\Chromify"; Filename: "{app}\{#MyAppExeName}"
+Name: "{group}\{cm:UninstallProgram,Chromify}"; Filename: "{uninstallexe}"
+Name: "{autodesktop}\Chromify"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,RGB Control}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,Chromify}"; Flags: nowait postinstall skipifsilent

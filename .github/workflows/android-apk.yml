@@ -57,17 +57,17 @@ jobs:
       - name: Rename APK
         run: |
           mkdir -p dist
-          cp app/build/app/outputs/flutter-apk/app-release.apk "dist/RGB-Control-${{ steps.ver.outputs.version }}.apk"
+          cp app/build/app/outputs/flutter-apk/app-release.apk "dist/Chromify-${{ steps.ver.outputs.version }}.apk"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: RGB-Control-APK
-          path: dist/RGB-Control-${{ steps.ver.outputs.version }}.apk
+          name: Chromify-APK
+          path: dist/Chromify-${{ steps.ver.outputs.version }}.apk
           if-no-files-found: error
 
       - name: Attach APK to release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/RGB-Control-${{ steps.ver.outputs.version }}.apk
+          files: dist/Chromify-${{ steps.ver.outputs.version }}.apk

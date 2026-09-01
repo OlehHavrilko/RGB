@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:rgb_controller/protocol/status_parser.dart';
+import 'package:chromify/protocol/status_parser.dart';
 
 void main() {
   Uint8List bytes(String s) => Uint8List.fromList(

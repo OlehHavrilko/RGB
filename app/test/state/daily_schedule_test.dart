@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:rgb_controller/state/daily_schedule.dart';
+import 'package:chromify/state/daily_schedule.dart';
 
 void main() {
   DailySchedule at(int h, int m, {bool on = true, bool enabled = true, Set<int>? days}) =>

@@ -15,13 +15,13 @@ class _AppScrollBehavior extends MaterialScrollBehavior {
       };
 }
 
-class RgbControllerApp extends StatelessWidget {
-  const RgbControllerApp({super.key});
+class ChromifyApp extends StatelessWidget {
+  const ChromifyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'RGB Control',
+      title: 'Chromify',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
       scrollBehavior: _AppScrollBehavior(),
