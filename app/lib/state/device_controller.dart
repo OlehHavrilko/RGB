@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -291,6 +292,50 @@ class DeviceController extends ChangeNotifier {
 
   Future<void> _persistPresets() =>
       _prefs.setPresetsRaw(_presets.map((p) => p.encode()).toList());
+
+  /// Экспорт всех пресетов одной JSON-строкой (для копирования/передачи).
+  String exportPresetsJson() =>
+      jsonEncode(_presets.map((p) => p.toJson()).toList());
+
+  /// Импортирует пресеты из JSON, произведённого [exportPresetsJson].
+  ///
+  /// Пресеты с уже занятым id получают новый id (чтобы не перезаписать
+  /// существующие), битые записи пропускаются. Возвращает число добавленных
+  /// пресетов.
+  Future<int> importPresetsJson(String raw) async {
+    final List<dynamic> list;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return 0;
+      list = decoded;
+    } catch (_) {
+      return 0;
+    }
+
+    final existingIds = _presets.map((p) => p.id).toSet();
+    final imported = <LedPreset>[];
+    for (final item in list) {
+      if (item is! Map) continue;
+      final preset = LedPreset.fromJson(item.cast<String, dynamic>());
+      if (preset == null) continue;
+      var next = preset;
+      while (existingIds.contains(next.id)) {
+        next = LedPreset(
+          id: '${next.id}_${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}',
+          name: next.name,
+          state: next.state,
+        );
+      }
+      existingIds.add(next.id);
+      imported.add(next);
+    }
+    if (imported.isEmpty) return 0;
+
+    _presets = [..._presets, ...imported];
+    notifyListeners();
+    await _persistPresets();
+    return imported.length;
+  }
 
   /// Переслать ленте всё текущее состояние (после подключения).
   void _pushFullState() {

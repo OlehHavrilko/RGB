@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../state/device_controller.dart';
@@ -23,32 +24,53 @@ class PresetsSection extends StatelessWidget {
       children: [
         SectionHeader(
           'Пресеты',
-          trailing: Pressable(
-            onTap: () => _saveDialog(context, ctrl),
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.glass,
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (presets.isNotEmpty) ...[
+                _IconGhostButton(
+                  icon: Icons.ios_share_rounded,
+                  tooltip: 'Скопировать пресеты в буфер обмена',
+                  onTap: () => _exportToClipboard(context, ctrl),
+                ),
+                const SizedBox(width: 6),
+              ],
+              _IconGhostButton(
+                icon: Icons.content_paste_go_rounded,
+                tooltip: 'Импортировать пресеты из буфера обмена',
+                onTap: () => _importFromClipboard(context, ctrl),
+              ),
+              const SizedBox(width: 6),
+              Pressable(
+                onTap: () => _saveDialog(context, ctrl),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.hairline),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.add_rounded, size: 16, color: AppColors.textPrimary),
-                  SizedBox(width: 4),
-                  Text(
-                    'Сохранить',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
-                    ),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.glass,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.hairline),
                   ),
-                ],
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.add_rounded,
+                          size: 16, color: AppColors.textPrimary),
+                      SizedBox(width: 4),
+                      Text(
+                        'Сохранить',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ),
         GlassCard(
@@ -131,6 +153,75 @@ class PresetsSection extends StatelessWidget {
       ),
     );
     if (ok ?? false) await ctrl.deletePreset(preset.id);
+  }
+
+  Future<void> _exportToClipboard(
+    BuildContext context,
+    DeviceController ctrl,
+  ) async {
+    await Clipboard.setData(ClipboardData(text: ctrl.exportPresetsJson()));
+    if (!context.mounted) return;
+    _showSnack(context, 'Пресеты скопированы в буфер обмена');
+  }
+
+  Future<void> _importFromClipboard(
+    BuildContext context,
+    DeviceController ctrl,
+  ) async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final text = data?.text;
+    if (text == null || text.isEmpty) {
+      if (!context.mounted) return;
+      _showSnack(context, 'В буфере обмена нет данных');
+      return;
+    }
+    final added = await ctrl.importPresetsJson(text);
+    if (!context.mounted) return;
+    _showSnack(
+      context,
+      added > 0
+          ? 'Добавлено пресетов: $added'
+          : 'Не удалось распознать пресеты в буфере обмена',
+    );
+  }
+
+  void _showSnack(BuildContext context, String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+}
+
+/// Маленькая кнопка-иконка без фона для действий в шапке секции.
+class _IconGhostButton extends StatelessWidget {
+  const _IconGhostButton({
+    required this.icon,
+    required this.onTap,
+    required this.tooltip,
+  });
+
+  final IconData icon;
+  final VoidCallback onTap;
+  final String tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Pressable(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: AppColors.glass,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.hairline),
+          ),
+          child: Icon(icon, size: 16, color: AppColors.textPrimary),
+        ),
+      ),
+    );
   }
 }
 
