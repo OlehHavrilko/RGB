@@ -15,6 +15,7 @@ class Prefs {
 
   static const _kKnownDevices = 'known_devices_v1';
   static const _kPresets = 'presets_v1';
+  static const _kScenes = 'scenes_v1';
   static const _kDeviceStatePrefix = 'device_state_v1:';
   static const _kSleepAtPrefix = 'sleep_at_epoch_ms:';
   static const _kSchedulesPrefix = 'schedules_v1:';
@@ -61,6 +62,15 @@ class Prefs {
 
   Future<void> setPresetsRaw(List<String> raw) =>
       _prefs.setStringList(_kPresets, raw);
+
+  // ─────────────────────────────── сцены (общие) ───────────────────────────
+
+  /// Список сцен — снимков состояний нескольких устройств сразу.
+  List<String> get scenesRaw =>
+      _prefs.getStringList(_kScenes) ?? const <String>[];
+
+  Future<void> setScenesRaw(List<String> raw) =>
+      _prefs.setStringList(_kScenes, raw);
 
   // ──────────────────────── последнее состояние ленты ──────────────────────
 

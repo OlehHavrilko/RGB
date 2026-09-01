@@ -12,6 +12,7 @@ import '../../state/devices_manager.dart';
 import '../../state/known_device.dart';
 import '../../state/scan_controller.dart';
 import '../control/control_screen.dart';
+import '../scenes/scenes_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/motion.dart';
 import '../widgets/ambient_background.dart';
@@ -102,10 +103,35 @@ class _ScanScreenState extends State<ScanScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
-                child: _Header(
-                  connectedCount:
-                      known.where((d) => manager.controllerFor(d.id).isConnected).length,
-                  knownCount: known.length,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: _Header(
+                        connectedCount: known
+                            .where((d) => manager.controllerFor(d.id).isConnected)
+                            .length,
+                        knownCount: known.length,
+                      ),
+                    ),
+                    Pressable(
+                      onTap: () => Navigator.of(context).push(
+                        FadeThroughPageRoute<void>(page: const ScenesScreen()),
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: AppColors.glass,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppColors.hairline),
+                        ),
+                        child: const Icon(Icons.auto_awesome_rounded,
+                            color: AppColors.textPrimary, size: 20),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               if (scan.availability == BleAvailability.poweredOff ||
