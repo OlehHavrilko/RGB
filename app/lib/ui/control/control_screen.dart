@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_strings.dart';
 import '../../state/device_controller.dart';
 import '../../state/devices_manager.dart';
 import '../../state/led_state.dart';
@@ -161,7 +162,7 @@ class _ControlScreenBody extends StatelessWidget {
                     children: [
                       const PresetsSection(),
                       const SizedBox(height: 20),
-                      const SectionHeader('Яркость'),
+                      SectionHeader(AppStrings.of(context).brightness),
                       GlassCard(
                         child: BrightnessSlider(
                           value: led.brightness,
@@ -224,9 +225,9 @@ class _TopBar extends StatelessWidget {
                 style: Theme.of(context).textTheme.headlineSmall,
                 overflow: TextOverflow.ellipsis,
               ),
-              const Text(
-                'Управление лентой',
-                style: TextStyle(
+              Text(
+                AppStrings.of(context).controlLedStrip,
+                style: const TextStyle(
                     color: AppColors.textFaint,
                     fontSize: 12,
                     fontWeight: FontWeight.w500),
@@ -282,10 +283,9 @@ class _SyncToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     return Tooltip(
-      message: enabled
-          ? 'Синхронизация включена: команды идут на все подключённые устройства'
-          : 'Включить синхронизацию с остальными подключёнными устройствами',
+      message: enabled ? s.syncOnTooltip : s.syncOffTooltip,
       child: Pressable(
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),
@@ -357,7 +357,7 @@ class _PowerArea extends StatelessWidget {
             fontSize: 15,
             color: on ? AppColors.textPrimary : AppColors.textFaint,
           ),
-          child: Text(on ? 'Включено' : 'Выключено'),
+          child: Text(on ? AppStrings.of(context).on : AppStrings.of(context).off),
         ),
       ],
     );
@@ -379,7 +379,7 @@ class _ModePanel extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SectionHeader('Белый свет'),
+            SectionHeader(AppStrings.of(context).whiteLight),
             GlassCard(
               child: WhiteTab(
                 warm: led.warm,
@@ -395,7 +395,7 @@ class _ModePanel extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SectionHeader('Эффекты'),
+            SectionHeader(AppStrings.of(context).effectsMode),
             GlassCard(
               child: EffectsSection(
                 selectedId: led.effectId,
@@ -425,7 +425,7 @@ class _ColorPanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SectionHeader('Цвет'),
+        SectionHeader(AppStrings.of(context).colorMode),
         GlassCard(
           child: Column(
             children: [

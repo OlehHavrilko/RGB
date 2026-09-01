@@ -57,7 +57,9 @@ class DeviceController extends ChangeNotifier {
   final _saveDebounce = Debouncer(const Duration(milliseconds: 400));
 
   /// Отображаемое имя устройства (из скана или из списка «Мои устройства»).
-  String get name => _name.isEmpty ? 'Без имени' : _name;
+  /// Языконезависимый fallback на [id] — локализованную подпись
+  /// «Без имени»/«No name» показывает сам UI при необходимости.
+  String get name => _name.isEmpty ? id : _name;
   LinkState get linkState => _linkState;
   LedState get led => _led;
   bool get isConnected => _linkState == LinkState.connected;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_strings.dart';
 import '../../protocol/effect_catalog.dart';
 import '../theme/app_colors.dart';
 import '../theme/motion.dart';
@@ -93,7 +94,7 @@ class EffectsSection extends StatelessWidget {
                       child: Align(
                         alignment: Alignment.bottomLeft,
                         child: Text(
-                          e.name,
+                          AppStrings.of(context).effectName(e.name),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_strings.dart';
 import '../../state/daily_schedule.dart';
 import '../../state/schedule_controller.dart';
 import '../../state/sunrise_alarm.dart';
@@ -9,8 +10,6 @@ import '../widgets/ambient_background.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/pressable.dart';
 import '../widgets/section_header.dart';
-
-const _dayLabels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
 /// Экран ежедневных расписаний включения/выключения ленты и
 /// будильников-рассветов.
@@ -22,6 +21,7 @@ class SchedulesScreen extends StatelessWidget {
     final sched = context.watch<ScheduleController>();
     final items = sched.schedules;
     final alarms = sched.sunriseAlarms;
+    final s = AppStrings.of(context);
 
     return Scaffold(
       body: AmbientBackground(
@@ -52,7 +52,7 @@ class SchedulesScreen extends StatelessWidget {
                     ),
                     const SizedBox(width: 14),
                     Text(
-                      'Расписание',
+                      s.scheduleTitle,
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                   ],
@@ -63,17 +63,16 @@ class SchedulesScreen extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
                   children: [
                     SectionHeader(
-                      'Включение / выключение',
+                      s.onOffSection,
                       trailing: _AddButton(
                         onTap: () => _addDialog(context, sched),
                       ),
                     ),
                     if (items.isEmpty)
-                      const _Empty(
+                      _Empty(
                         icon: Icons.schedule_rounded,
-                        title: 'Нет расписаний',
-                        text: 'Добавьте автоматическое включение\n'
-                            'или выключение по времени',
+                        title: s.noSchedules,
+                        text: s.addAutoOnOffHint,
                       )
                     else
                       for (final item in items) ...[
@@ -82,17 +81,16 @@ class SchedulesScreen extends StatelessWidget {
                       ],
                     const SizedBox(height: 24),
                     SectionHeader(
-                      'Будильник-рассвет',
+                      s.sunriseSection,
                       trailing: _AddButton(
                         onTap: () => _addSunriseDialog(context, sched),
                       ),
                     ),
                     if (alarms.isEmpty)
-                      const _Empty(
+                      _Empty(
                         icon: Icons.wb_twilight_rounded,
-                        title: 'Нет будильников',
-                        text: 'Лента плавно наберёт яркость к нужному '
-                            'времени вместо резкого включения',
+                        title: s.noAlarms,
+                        text: s.sunriseEmptyHint,
                       )
                     else
                       for (final alarm in alarms) ...[
@@ -111,26 +109,27 @@ class SchedulesScreen extends StatelessWidget {
 
   Future<void> _addDialog(
       BuildContext context, ScheduleController sched) async {
+    final s = AppStrings.of(context);
     final now = TimeOfDay.now();
     final picked = await showTimePicker(
       context: context,
       initialTime: now,
-      helpText: 'Время срабатывания',
+      helpText: s.triggerTimeHelp,
     );
     if (picked == null || !context.mounted) return;
     final turnOn = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.bgElevated,
-        title: const Text('Что сделать?'),
+        title: Text(s.whatToDo),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Выключить'),
+            child: Text(s.turnOff),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Включить'),
+            child: Text(s.turnOn),
           ),
         ],
       ),
@@ -148,7 +147,7 @@ class SchedulesScreen extends StatelessWidget {
     final picked = await showTimePicker(
       context: context,
       initialTime: now,
-      helpText: 'Время окончания рассвета',
+      helpText: AppStrings.of(context).sunriseEndHelp,
     );
     if (picked == null || !context.mounted) return;
     final result = await showDialog<({int duration, int brightness})>(
@@ -181,14 +180,14 @@ class _AddButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppColors.hairline),
         ),
-        child: const Row(
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.add_rounded, size: 16, color: AppColors.textPrimary),
-            SizedBox(width: 4),
+            const Icon(Icons.add_rounded, size: 16, color: AppColors.textPrimary),
+            const SizedBox(width: 4),
             Text(
-              'Добавить',
-              style: TextStyle(
+              AppStrings.of(context).add,
+              style: const TextStyle(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w700,
                 fontSize: 12,
@@ -218,14 +217,15 @@ class _SunriseSettingsDialogState extends State<_SunriseSettingsDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     return AlertDialog(
       backgroundColor: AppColors.bgElevated,
-      title: Text('Рассвет к ${widget.time.format(context)}'),
+      title: Text(s.sunriseDialogTitle(widget.time.format(context))),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Длительность: $_duration мин',
+          Text(s.durationMinutesLabel(_duration),
               style: const TextStyle(color: AppColors.textFaint)),
           Slider(
             value: _duration.toDouble(),
@@ -235,7 +235,7 @@ class _SunriseSettingsDialogState extends State<_SunriseSettingsDialog> {
             activeColor: AppColors.accent,
             onChanged: (v) => setState(() => _duration = v.round()),
           ),
-          Text('Целевая яркость: $_brightness%',
+          Text(s.targetBrightnessLabel(_brightness),
               style: const TextStyle(color: AppColors.textFaint)),
           Slider(
             value: _brightness.toDouble(),
@@ -250,13 +250,13 @@ class _SunriseSettingsDialogState extends State<_SunriseSettingsDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Отмена'),
+          child: Text(s.cancel),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(
             (duration: _duration, brightness: _brightness),
           ),
-          child: const Text('Сохранить'),
+          child: Text(s.save),
         ),
       ],
     );
@@ -271,6 +271,7 @@ class _ScheduleTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sched = context.read<ScheduleController>();
+    final s = AppStrings.of(context);
     final dim = !item.enabled;
 
     return GlassCard(
@@ -305,7 +306,7 @@ class _ScheduleTile extends StatelessWidget {
                     ),
                     const SizedBox(width: 10),
                     Text(
-                      item.turnOn ? 'включить' : 'выключить',
+                      item.turnOn ? s.turnOnLower : s.turnOffLower,
                       style: const TextStyle(
                         color: AppColors.textFaint,
                         fontWeight: FontWeight.w600,
@@ -340,7 +341,7 @@ class _ScheduleTile extends StatelessWidget {
               children: [
                 for (var d = 1; d <= 7; d++)
                   _DayToggle(
-                    label: _dayLabels[d - 1],
+                    label: s.dayLabels[d - 1],
                     active: item.days.contains(d),
                     onTap: () {
                       final next = {...item.days};
@@ -366,6 +367,7 @@ class _SunriseTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sched = context.read<ScheduleController>();
+    final s = AppStrings.of(context);
     final dim = !alarm.enabled;
 
     return GlassCard(
@@ -393,8 +395,8 @@ class _SunriseTile extends StatelessWidget {
                     ),
                     const SizedBox(width: 10),
                     Text(
-                      'за ${alarm.durationMinutes} мин → '
-                      '${alarm.targetBrightness}%',
+                      s.sunriseRampLabel(
+                          alarm.durationMinutes, alarm.targetBrightness),
                       style: const TextStyle(
                         color: AppColors.textFaint,
                         fontWeight: FontWeight.w600,
@@ -429,7 +431,7 @@ class _SunriseTile extends StatelessWidget {
               children: [
                 for (var d = 1; d <= 7; d++)
                   _DayToggle(
-                    label: _dayLabels[d - 1],
+                    label: s.dayLabels[d - 1],
                     active: alarm.days.contains(d),
                     onTap: () {
                       final next = {...alarm.days};

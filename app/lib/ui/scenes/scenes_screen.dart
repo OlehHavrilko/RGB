@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_strings.dart';
 import '../../state/devices_manager.dart';
 import '../../state/scene.dart';
 import '../theme/app_colors.dart';
@@ -15,15 +16,16 @@ class ScenesScreen extends StatelessWidget {
   const ScenesScreen({super.key});
 
   Future<void> _saveDialog(BuildContext context, DevicesManager manager) async {
+    final s = AppStrings.of(context);
     final connected = manager.connectedSessions;
     final controller = TextEditingController(
-      text: 'Сцена ${manager.scenes.length + 1}',
+      text: s.sceneDefaultName(manager.scenes.length + 1),
     );
     final name = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.bgElevated,
-        title: const Text('Новая сцена'),
+        title: Text(s.newSceneTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -32,13 +34,14 @@ class ScenesScreen extends StatelessWidget {
               controller: controller,
               autofocus: true,
               maxLength: 24,
-              decoration: const InputDecoration(hintText: 'Название'),
+              decoration: InputDecoration(hintText: s.nameHint),
               onSubmitted: (v) => Navigator.of(context).pop(v),
             ),
             Text(
-              'Сохранит текущее состояние ${connected.length} '
-              '${_deviceWord(connected.length)}: '
-              '${connected.map((c) => c.name).join(', ')}',
+              s.willSaveSceneState(
+                connected.length,
+                connected.map((c) => c.name).join(', '),
+              ),
               style: const TextStyle(color: AppColors.textFaint, fontSize: 12),
             ),
           ],
@@ -46,11 +49,11 @@ class ScenesScreen extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Отмена'),
+            child: Text(s.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(controller.text),
-            child: const Text('Сохранить'),
+            child: Text(s.save),
           ),
         ],
       ),
@@ -61,30 +64,26 @@ class ScenesScreen extends StatelessWidget {
     }
   }
 
-  String _deviceWord(int n) {
-    final mod10 = n % 10, mod100 = n % 100;
-    return mod10 == 1 && mod100 != 11 ? 'устройства' : 'устройств';
-  }
-
   Future<void> _confirmDelete(
     BuildContext context,
     DevicesManager manager,
     Scene scene,
   ) async {
+    final s = AppStrings.of(context);
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.bgElevated,
-        title: Text('Удалить «${scene.name}»?'),
+        title: Text(s.deleteSceneTitle(scene.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Отмена'),
+            child: Text(s.cancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Удалить'),
+            child: Text(s.delete),
           ),
         ],
       ),
@@ -95,6 +94,7 @@ class ScenesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final manager = context.watch<DevicesManager>();
+    final s = AppStrings.of(context);
     final scenes = manager.scenes;
     final canSave = manager.connectedSessions.isNotEmpty;
 
@@ -127,7 +127,7 @@ class ScenesScreen extends StatelessWidget {
                     ),
                     const SizedBox(width: 14),
                     Expanded(
-                      child: Text('Сцены',
+                      child: Text(s.scenesTitle,
                           style: Theme.of(context).textTheme.headlineSmall),
                     ),
                   ],
@@ -147,8 +147,7 @@ class ScenesScreen extends StatelessWidget {
                             ScaffoldMessenger.of(context)
                               ..hideCurrentSnackBar()
                               ..showSnackBar(SnackBar(
-                                content:
-                                    Text('Сцена «${scenes[i].name}» применена'),
+                                content: Text(s.sceneApplied(scenes[i].name)),
                               ));
                           },
                           onDelete: () =>
@@ -185,7 +184,7 @@ class ScenesScreen extends StatelessWidget {
                   size: 20),
               const SizedBox(width: 8),
               Text(
-                'Сохранить текущее',
+                s.saveCurrent,
                 style: TextStyle(
                   color: canSave ? Colors.white : AppColors.textFaint,
                   fontWeight: FontWeight.w700,
@@ -282,6 +281,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -291,14 +291,12 @@ class _EmptyState extends StatelessWidget {
             const Icon(Icons.auto_awesome_rounded,
                 size: 48, color: AppColors.textFaint),
             const SizedBox(height: 20),
-            Text('Сцен пока нет', style: Theme.of(context).textTheme.titleMedium),
+            Text(s.noScenesYet, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
-            const Text(
-              'Настройте цвета на нескольких подключённых лентах и нажмите '
-              '«Сохранить текущее» — сцена запомнит их все и применит одним '
-              'нажатием.',
+            Text(
+              s.noScenesHint,
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textFaint, height: 1.5),
+              style: const TextStyle(color: AppColors.textFaint, height: 1.5),
             ),
           ],
         ),

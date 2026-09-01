@@ -16,7 +16,10 @@ class DiscoveredDevice {
 
   bool get isSupported => ElkEndpoints.looksSupported(name);
 
-  String get displayName => name.isEmpty ? 'Без имени' : name;
+  /// Имя для отображения, если у устройства нет собственного BLE-имени.
+  /// Языконезависимый fallback — локализованную подпись «Без имени»/
+  /// «No name» показывает сам UI (см. `AppStrings.withoutName`).
+  String get displayName => name.isEmpty ? id : name;
 
   DiscoveredDevice copyWith({String? name, int? rssi, DateTime? seenAt}) {
     return DiscoveredDevice(

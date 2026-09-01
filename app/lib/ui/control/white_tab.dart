@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../widgets/gradient_slider.dart';
 
@@ -29,16 +30,16 @@ class WhiteTab extends StatelessWidget {
           onChangeEnd: (t) => onChangeEnd((t * 100).round()),
         ),
         const SizedBox(height: 10),
-        const Row(
+        Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Холодный',
-                style: TextStyle(
+            Text(AppStrings.of(context).cold,
+                style: const TextStyle(
                     color: AppColors.textFaint,
                     fontSize: 12,
                     fontWeight: FontWeight.w600)),
-            Text('Тёплый',
-                style: TextStyle(
+            Text(AppStrings.of(context).warm,
+                style: const TextStyle(
                     color: AppColors.textFaint,
                     fontSize: 12,
                     fontWeight: FontWeight.w600)),
