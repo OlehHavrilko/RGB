@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-Future<DeviceController> _newController() async {
+Future<DeviceController> _newController({String id = 'AA:BB:CC:DD:EE:FF'}) async {
   SharedPreferences.setMockInitialValues({});
-  return DeviceController(Prefs(await SharedPreferences.getInstance()));
+  return DeviceController(Prefs(await SharedPreferences.getInstance()), id: id);
 }
 
 void main() {

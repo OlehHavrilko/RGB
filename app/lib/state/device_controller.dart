@@ -13,13 +13,18 @@ import 'led_preset.dart';
 import 'led_state.dart';
 import 'prefs.dart';
 
-/// Единый источник правды для экрана управления: соединение + состояние ленты.
+/// Единый источник правды для экрана управления **одним** устройством:
+/// соединение + состояние ленты. Приложение может держать несколько
+/// экземпляров одновременно — по одному на каждое подключённое устройство
+/// (см. `DevicesManager`) — поэтому [id] задаётся один раз при создании и не
+/// меняется, а всё, что сохраняется в [Prefs], пишется под этим id.
 ///
 /// Интерфейс обновляется оптимистично, команды в BLE уходят с ограничением
 /// частоты ([Debouncer]) — чтобы перетаскивание ползунков не забивало канал.
 class DeviceController extends ChangeNotifier {
-  DeviceController(this._prefs) {
-    final restored = _prefs.lastStateRaw;
+  DeviceController(this._prefs, {required this.id, String? name})
+      : _name = name ?? '' {
+    final restored = _prefs.deviceStateRaw(id);
     if (restored != null) {
       _led = LedState.tryDecode(restored) ?? const LedState();
     }
@@ -31,11 +36,15 @@ class DeviceController extends ChangeNotifier {
 
   final Prefs _prefs;
 
+  /// Стабильный идентификатор BLE-устройства (адрес/UUID) — не меняется
+  /// на протяжении жизни контроллера.
+  final String id;
+
   ElkConnection? _conn;
   StreamSubscription<LinkState>? _stateSub;
   StreamSubscription<ElkStatus>? _statusSub;
 
-  DiscoveredDevice? _device;
+  String _name;
   LinkState _linkState = LinkState.disconnected;
   LedState _led = const LedState();
   List<LedPreset> _presets = const [];
@@ -47,7 +56,8 @@ class DeviceController extends ChangeNotifier {
   final _speedDebounce = Debouncer(const Duration(milliseconds: 90));
   final _saveDebounce = Debouncer(const Duration(milliseconds: 400));
 
-  DiscoveredDevice? get device => _device;
+  /// Отображаемое имя устройства (из скана или из списка «Мои устройства»).
+  String get name => _name.isEmpty ? 'Без имени' : _name;
   LinkState get linkState => _linkState;
   LedState get led => _led;
   bool get isConnected => _linkState == LinkState.connected;
@@ -56,34 +66,31 @@ class DeviceController extends ChangeNotifier {
       _linkState == LinkState.discovering ||
       _linkState == LinkState.reconnecting;
 
-  String? get lastKnownDeviceName => _prefs.lastDeviceName;
-  String? get lastKnownDeviceId => _prefs.lastDeviceId;
-
   List<LedPreset> get presets => List.unmodifiable(_presets);
 
   // ─────────────────────────────── соединение ───────────────────────────────
 
-  Future<void> connectTo(DiscoveredDevice device) async {
-    if (_device?.id == device.id && isConnected) return;
+  Future<void> connectTo(DiscoveredDevice device) =>
+      connect(name: device.displayName);
+
+  Future<void> connect({String? name}) async {
+    if (name != null && name.isNotEmpty) _name = name;
+    if (isConnected) return;
     await _teardownConnection();
 
-    _device = device;
     _linkState = LinkState.connecting;
     notifyListeners();
 
-    final conn = ElkConnection(device.id);
+    final conn = ElkConnection(id);
     _conn = conn;
     _stateSub = conn.stateStream.listen(_onLinkState);
     _statusSub = conn.statusStream.listen(_onStatus);
 
-    await _prefs.setLastDevice(device.id, device.displayName);
+    await _prefs.touchKnownDevice(id, this.name);
     await conn.connect();
   }
 
-  Future<void> reconnect() async {
-    final d = _device;
-    if (d != null) await connectTo(d);
-  }
+  Future<void> reconnect() => connect();
 
   Future<void> disconnect() async {
     await _teardownConnection();
@@ -93,9 +100,7 @@ class DeviceController extends ChangeNotifier {
 
   Future<void> forget() async {
     await disconnect();
-    _device = null;
-    await _prefs.clearLastDevice();
-    notifyListeners();
+    await _prefs.removeKnownDevice(id);
   }
 
   Future<void> _teardownConnection() async {
@@ -146,7 +151,7 @@ class DeviceController extends ChangeNotifier {
 
   void _touch() {
     _lastUserAction = DateTime.now();
-    _saveDebounce(() => _prefs.setLastStateRaw(_led.encode()));
+    _saveDebounce(() => _prefs.setDeviceStateRaw(id, _led.encode()));
   }
 
   Future<void> _send(Uint8List frame) async {

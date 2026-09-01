@@ -18,9 +18,9 @@ class ScheduleController extends ChangeNotifier {
     this._device, {
     Duration tick = const Duration(seconds: 10),
   }) {
-    final ms = _prefs.sleepAtEpochMs;
+    final ms = _prefs.sleepAtEpochMs(_device.id);
     _sleepAt = ms == null ? null : DateTime.fromMillisecondsSinceEpoch(ms);
-    _schedules = _prefs.schedulesRaw
+    _schedules = _prefs.schedulesRaw(_device.id)
         .map(DailySchedule.decode)
         .whereType<DailySchedule>()
         .toList()
@@ -52,14 +52,14 @@ class ScheduleController extends ChangeNotifier {
 
   void startSleep(Duration after) {
     _sleepAt = DateTime.now().add(after);
-    _prefs.setSleepAtEpochMs(_sleepAt!.millisecondsSinceEpoch);
+    _prefs.setSleepAtEpochMs(_device.id, _sleepAt!.millisecondsSinceEpoch);
     notifyListeners();
   }
 
   void cancelSleep() {
     if (_sleepAt == null) return;
     _sleepAt = null;
-    _prefs.setSleepAtEpochMs(null);
+    _prefs.setSleepAtEpochMs(_device.id, null);
     notifyListeners();
   }
 
@@ -108,7 +108,7 @@ class ScheduleController extends ChangeNotifier {
   }
 
   Future<void> _persist() =>
-      _prefs.setSchedulesRaw(_schedules.map((s) => s.encode()).toList());
+      _prefs.setSchedulesRaw(_device.id, _schedules.map((s) => s.encode()).toList());
 
   // ──────────────────────────────────── тик ────────────────────────────────
 
@@ -120,7 +120,7 @@ class ScheduleController extends ChangeNotifier {
     final s = _sleepAt;
     if (s != null && !now.isBefore(s)) {
       _sleepAt = null;
-      _prefs.setSleepAtEpochMs(null);
+      _prefs.setSleepAtEpochMs(_device.id, null);
       _device.setPower(false);
       notifyListeners();
     }
