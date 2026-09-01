@@ -1,6 +1,8 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'l10n/locale_controller.dart';
 import 'ui/scan/scan_screen.dart';
 import 'ui/theme/app_theme.dart';
 
@@ -20,11 +22,19 @@ class ChromifyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final locale = LocaleController.of(context).locale;
     return MaterialApp(
       title: 'Chromify',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
       scrollBehavior: _AppScrollBehavior(),
+      locale: locale.toLocale(),
+      supportedLocales: const [Locale('ru'), Locale('en')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       home: const ScanScreen(),
     );
   }

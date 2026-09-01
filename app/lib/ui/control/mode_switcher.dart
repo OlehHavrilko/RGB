@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_strings.dart';
 import '../../state/led_state.dart';
 import '../theme/app_colors.dart';
 import '../theme/motion.dart';
@@ -12,18 +13,18 @@ class ModeSwitcher extends StatelessWidget {
   final LedMode mode;
   final ValueChanged<LedMode> onChanged;
 
-  static const _items = [
-    (LedMode.color, 'Цвет', Icons.palette_outlined),
-    (LedMode.white, 'Белый', Icons.wb_sunny_outlined),
-    (LedMode.effect, 'Эффекты', Icons.auto_awesome_outlined),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final items = [
+      (LedMode.color, s.colorMode, Icons.palette_outlined),
+      (LedMode.white, s.whiteMode, Icons.wb_sunny_outlined),
+      (LedMode.effect, s.effectsMode, Icons.auto_awesome_outlined),
+    ];
     return LayoutBuilder(
       builder: (context, constraints) {
-        final segW = constraints.maxWidth / _items.length;
-        final index = _items.indexWhere((e) => e.$1 == mode);
+        final segW = constraints.maxWidth / items.length;
+        final index = items.indexWhere((e) => e.$1 == mode);
         return Container(
           height: 48,
           decoration: BoxDecoration(
@@ -49,7 +50,7 @@ class ModeSwitcher extends StatelessWidget {
               ),
               Row(
                 children: [
-                  for (final item in _items)
+                  for (final item in items)
                     Expanded(
                       child: Pressable(
                         haptic: true,

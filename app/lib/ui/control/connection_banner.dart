@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../ble/ble_connection.dart';
+import '../../l10n/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/motion.dart';
 import '../widgets/pressable.dart';
@@ -19,30 +20,30 @@ class ConnectionBanner extends StatelessWidget {
   final VoidCallback onReconnect;
   final VoidCallback onDisconnect;
 
-  ({Color color, String label, bool spinner}) get _visual {
+  ({Color color, String label, bool spinner}) _visual(AppStrings s) {
     switch (state) {
       case LinkState.connected:
-        return (color: AppColors.success, label: 'Подключено', spinner: false);
+        return (color: AppColors.success, label: s.statusConnected, spinner: false);
       case LinkState.connecting:
-        return (color: AppColors.accent, label: 'Подключение…', spinner: true);
+        return (color: AppColors.accent, label: s.statusConnecting, spinner: true);
       case LinkState.discovering:
-        return (color: AppColors.accent, label: 'Настройка…', spinner: true);
+        return (color: AppColors.accent, label: s.statusDiscovering, spinner: true);
       case LinkState.reconnecting:
         return (
           color: AppColors.accentSoft,
-          label: 'Переподключение…',
+          label: s.statusReconnecting,
           spinner: true
         );
       case LinkState.failed:
-        return (color: AppColors.danger, label: 'Ошибка связи', spinner: false);
+        return (color: AppColors.danger, label: s.statusFailed, spinner: false);
       case LinkState.disconnected:
-        return (color: AppColors.textFaint, label: 'Отключено', spinner: false);
+        return (color: AppColors.textFaint, label: s.statusDisconnected, spinner: false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final v = _visual;
+    final v = _visual(AppStrings.of(context));
     final showReconnect =
         state == LinkState.failed || state == LinkState.disconnected;
 
@@ -100,7 +101,7 @@ class ConnectionBanner extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Text(
-                  'Ещё раз',
+                  AppStrings.of(context).retry,
                   style: TextStyle(
                     color: v.color,
                     fontWeight: FontWeight.w700,

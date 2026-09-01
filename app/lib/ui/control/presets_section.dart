@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_strings.dart';
 import '../../state/device_controller.dart';
 import '../../state/led_preset.dart';
 import '../theme/app_colors.dart';
@@ -18,26 +19,27 @@ class PresetsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final ctrl = context.watch<DeviceController>();
     final presets = ctrl.presets;
+    final s = AppStrings.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SectionHeader(
-          'Пресеты',
+          s.presets,
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               if (presets.isNotEmpty) ...[
                 _IconGhostButton(
                   icon: Icons.ios_share_rounded,
-                  tooltip: 'Скопировать пресеты в буфер обмена',
+                  tooltip: s.copyPresetsTooltip,
                   onTap: () => _exportToClipboard(context, ctrl),
                 ),
                 const SizedBox(width: 6),
               ],
               _IconGhostButton(
                 icon: Icons.content_paste_go_rounded,
-                tooltip: 'Импортировать пресеты из буфера обмена',
+                tooltip: s.pastePresetsTooltip,
                 onTap: () => _importFromClipboard(context, ctrl),
               ),
               const SizedBox(width: 6),
@@ -52,15 +54,15 @@ class PresetsSection extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: AppColors.hairline),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.add_rounded,
+                      const Icon(Icons.add_rounded,
                           size: 16, color: AppColors.textPrimary),
-                      SizedBox(width: 4),
+                      const SizedBox(width: 4),
                       Text(
-                        'Сохранить',
-                        style: TextStyle(
+                        s.save,
+                        style: const TextStyle(
                           color: AppColors.textPrimary,
                           fontWeight: FontWeight.w700,
                           fontSize: 12,
@@ -96,29 +98,30 @@ class PresetsSection extends StatelessWidget {
   }
 
   Future<void> _saveDialog(BuildContext context, DeviceController ctrl) async {
+    final s = AppStrings.of(context);
     final controller = TextEditingController(
-      text: 'Пресет ${ctrl.presets.length + 1}',
+      text: s.presetDefaultName(ctrl.presets.length + 1),
     );
     final name = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.bgElevated,
-        title: const Text('Новый пресет'),
+        title: Text(s.newPresetTitle),
         content: TextField(
           controller: controller,
           autofocus: true,
           maxLength: 24,
-          decoration: const InputDecoration(hintText: 'Название'),
+          decoration: InputDecoration(hintText: s.nameHint),
           onSubmitted: (v) => Navigator.of(context).pop(v),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Отмена'),
+            child: Text(s.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(controller.text),
-            child: const Text('Сохранить'),
+            child: Text(s.save),
           ),
         ],
       ),
@@ -134,20 +137,21 @@ class PresetsSection extends StatelessWidget {
     DeviceController ctrl,
     LedPreset preset,
   ) async {
+    final s = AppStrings.of(context);
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.bgElevated,
-        title: Text('Удалить «${preset.name}»?'),
+        title: Text(s.deletePresetTitle(preset.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Отмена'),
+            child: Text(s.cancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Удалить'),
+            child: Text(s.delete),
           ),
         ],
       ),
@@ -161,7 +165,7 @@ class PresetsSection extends StatelessWidget {
   ) async {
     await Clipboard.setData(ClipboardData(text: ctrl.exportPresetsJson()));
     if (!context.mounted) return;
-    _showSnack(context, 'Пресеты скопированы в буфер обмена');
+    _showSnack(context, AppStrings.of(context).presetsCopied);
   }
 
   Future<void> _importFromClipboard(
@@ -172,16 +176,15 @@ class PresetsSection extends StatelessWidget {
     final text = data?.text;
     if (text == null || text.isEmpty) {
       if (!context.mounted) return;
-      _showSnack(context, 'В буфере обмена нет данных');
+      _showSnack(context, AppStrings.of(context).clipboardEmpty);
       return;
     }
     final added = await ctrl.importPresetsJson(text);
     if (!context.mounted) return;
+    final s = AppStrings.of(context);
     _showSnack(
       context,
-      added > 0
-          ? 'Добавлено пресетов: $added'
-          : 'Не удалось распознать пресеты в буфере обмена',
+      added > 0 ? s.presetsAdded(added) : s.presetsParseFailed,
     );
   }
 
@@ -288,15 +291,15 @@ class _EmptyHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    return Row(
       children: [
-        Icon(Icons.bookmark_border_rounded,
+        const Icon(Icons.bookmark_border_rounded,
             size: 18, color: AppColors.textFaint),
-        SizedBox(width: 10),
+        const SizedBox(width: 10),
         Expanded(
           child: Text(
-            'Настройте цвет или эффект и нажмите «Сохранить»',
-            style: TextStyle(color: AppColors.textFaint, fontSize: 13),
+            AppStrings.of(context).presetsEmptyHint,
+            style: const TextStyle(color: AppColors.textFaint, fontSize: 13),
           ),
         ),
       ],

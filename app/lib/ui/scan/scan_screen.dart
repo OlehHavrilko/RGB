@@ -7,6 +7,9 @@ import 'package:provider/provider.dart';
 import '../../ble/ble_connection.dart';
 import '../../ble/ble_device.dart';
 import '../../ble/ble_service.dart';
+import '../../l10n/app_locale.dart';
+import '../../l10n/app_strings.dart';
+import '../../l10n/locale_controller.dart';
 import '../../state/device_controller.dart';
 import '../../state/devices_manager.dart';
 import '../../state/known_device.dart';
@@ -59,23 +62,22 @@ class _ScanScreenState extends State<ScanScreen> {
   }
 
   Future<void> _forget(KnownDevice device) async {
+    final s = AppStrings.of(context);
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.bgElevated,
-        title: Text('Забыть «${device.name}»?'),
-        content: const Text(
-          'Устройство отключится и пропадёт из списка «Мои устройства».',
-        ),
+        title: Text(s.forgetDeviceTitle(device.name)),
+        content: Text(s.forgetDeviceBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Отмена'),
+            child: Text(s.cancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Забыть'),
+            child: Text(s.forget),
           ),
         ],
       ),
@@ -88,6 +90,7 @@ class _ScanScreenState extends State<ScanScreen> {
   Widget build(BuildContext context) {
     final scan = context.watch<ScanController>();
     final manager = context.watch<DevicesManager>();
+    final s = AppStrings.of(context);
     final known = manager.knownDevices;
     final knownIds = known.map((d) => d.id).toSet();
     final discovered =
@@ -114,6 +117,8 @@ class _ScanScreenState extends State<ScanScreen> {
                         knownCount: known.length,
                       ),
                     ),
+                    const _LocaleToggle(),
+                    const SizedBox(width: 8),
                     Pressable(
                       onTap: () => Navigator.of(context).push(
                         FadeThroughPageRoute<void>(page: const ScenesScreen()),
@@ -136,14 +141,19 @@ class _ScanScreenState extends State<ScanScreen> {
               ),
               if (scan.availability == BleAvailability.poweredOff ||
                   scan.availability == BleAvailability.unauthorized ||
-                  scan.error != null)
+                  scan.errorKind != null)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 4, 24, 4),
                   child: _Notice(
-                    text: scan.error ??
-                        (scan.availability == BleAvailability.poweredOff
-                            ? 'Включите Bluetooth в системе'
-                            : 'Нет доступа к Bluetooth'),
+                    text: switch (scan.errorKind) {
+                      ScanErrorKind.noPermission => s.scanNoPermission,
+                      ScanErrorKind.bluetoothOff => s.scanBluetoothOff,
+                      ScanErrorKind.startFailed =>
+                        s.scanStartFailed(scan.errorDetail ?? ''),
+                      null => scan.availability == BleAvailability.poweredOff
+                          ? s.enableBluetooth
+                          : s.noBluetoothAccess,
+                    },
                   ),
                 ),
               Expanded(
@@ -153,7 +163,7 @@ class _ScanScreenState extends State<ScanScreen> {
                         padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
                         children: [
                           if (known.isNotEmpty) ...[
-                            const _SectionLabel('Мои устройства'),
+                            _SectionLabel(s.myDevices),
                             const SizedBox(height: 10),
                             for (var i = 0; i < known.length; i++)
                               Padding(
@@ -175,7 +185,7 @@ class _ScanScreenState extends State<ScanScreen> {
                             const SizedBox(height: 8),
                           ],
                           if (discovered.isNotEmpty || known.isNotEmpty) ...[
-                            const _SectionLabel('Поблизости'),
+                            _SectionLabel(s.nearby),
                             const SizedBox(height: 10),
                           ],
                           for (var i = 0; i < discovered.length; i++)
@@ -197,8 +207,8 @@ class _ScanScreenState extends State<ScanScreen> {
                               padding: const EdgeInsets.symmetric(vertical: 8),
                               child: Text(
                                 scan.isScanning
-                                    ? 'Ищем ещё…'
-                                    : 'Больше устройств не найдено',
+                                    ? s.searchingForMore
+                                    : s.noMoreDevicesFound,
                                 style: const TextStyle(
                                     color: AppColors.textFaint, fontSize: 13),
                               ),
@@ -219,6 +229,38 @@ class _ScanScreenState extends State<ScanScreen> {
   }
 }
 
+/// Значок-переключатель языка интерфейса (RU/EN).
+class _LocaleToggle extends StatelessWidget {
+  const _LocaleToggle();
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = LocaleController.of(context);
+    return Pressable(
+      onTap: controller.toggle,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        width: 40,
+        height: 40,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: AppColors.glass,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.hairline),
+        ),
+        child: Text(
+          controller.locale == AppLocale.ru ? 'RU' : 'EN',
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w800,
+            fontSize: 12,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _Header extends StatelessWidget {
   const _Header({required this.connectedCount, required this.knownCount});
 
@@ -227,19 +269,20 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     final String subtitle;
     if (knownCount == 0) {
-      subtitle = 'Найдите свой контроллер подсветки';
+      subtitle = s.findYourController;
     } else if (connectedCount == 0) {
-      subtitle = 'Известно устройств: $knownCount';
+      subtitle = s.knownDevicesCount(knownCount);
     } else {
-      subtitle = 'Подключено: $connectedCount из $knownCount';
+      subtitle = s.connectedOfKnown(connectedCount, knownCount);
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Устройства',
+          s.devicesTitle,
           style: Theme.of(context).textTheme.displaySmall?.copyWith(fontSize: 32),
         ),
         const SizedBox(height: 4),
@@ -287,25 +330,26 @@ class _KnownDeviceTile extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onForget;
 
-  ({Color color, String label}) _statusFor(BuildContext context) {
+  ({Color color, String label}) _statusFor(AppStrings s) {
     switch (ctrl.linkState) {
       case LinkState.connected:
-        return (color: AppColors.success, label: 'Подключено');
+        return (color: AppColors.success, label: s.statusConnected);
       case LinkState.connecting:
       case LinkState.discovering:
-        return (color: AppColors.accent, label: 'Подключение…');
+        return (color: AppColors.accent, label: s.statusConnecting);
       case LinkState.reconnecting:
-        return (color: AppColors.accentSoft, label: 'Переподключение…');
+        return (color: AppColors.accentSoft, label: s.statusReconnecting);
       case LinkState.failed:
-        return (color: AppColors.danger, label: 'Ошибка связи');
+        return (color: AppColors.danger, label: s.statusFailed);
       case LinkState.disconnected:
-        return (color: AppColors.textFaint, label: 'Отключено');
+        return (color: AppColors.textFaint, label: s.statusDisconnected);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final status = _statusFor(context);
+    final s = AppStrings.of(context);
+    final status = _statusFor(s);
     return Pressable(
       onTap: onTap,
       onLongPress: onForget,
@@ -340,7 +384,7 @@ class _KnownDeviceTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    device.name.isEmpty ? 'Без имени' : device.name,
+                    device.name.isEmpty ? s.withoutName : device.name,
                     style: Theme.of(context).textTheme.titleMedium,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -386,6 +430,7 @@ class _DeviceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     return Pressable(
       onTap: onTap,
       borderRadius: BorderRadius.circular(24),
@@ -413,13 +458,13 @@ class _DeviceTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    device.displayName,
+                    device.name.isEmpty ? s.withoutName : device.name,
                     style: Theme.of(context).textTheme.titleMedium,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    device.isSupported ? 'ELK-BLEDOM · поддерживается' : 'BLE-устройство',
+                    device.isSupported ? s.elkSupported : s.bleDevice,
                     style: const TextStyle(
                       color: AppColors.textFaint,
                       fontSize: 12,
@@ -445,6 +490,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -452,14 +498,14 @@ class _EmptyState extends StatelessWidget {
           _PulseRing(active: scanning),
           const SizedBox(height: 28),
           Text(
-            scanning ? 'Ищем устройства…' : 'Поиск остановлен',
+            scanning ? s.searchingDevices : s.searchStopped,
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 6),
-          const Text(
-            'Убедитесь, что контроллер запитан\nи находится рядом',
+          Text(
+            s.makeSureControllerPowered,
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.textFaint, height: 1.5),
+            style: const TextStyle(color: AppColors.textFaint, height: 1.5),
           ),
         ],
       ),
@@ -524,7 +570,9 @@ class _ScanButton extends StatelessWidget {
                 color: Colors.white, size: 20),
             const SizedBox(width: 10),
             Text(
-              scanning ? 'Остановить' : 'Искать заново',
+              scanning
+                  ? AppStrings.of(context).stopScanning
+                  : AppStrings.of(context).searchAgain,
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w700,

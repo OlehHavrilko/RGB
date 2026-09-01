@@ -5,6 +5,12 @@ import 'package:flutter/foundation.dart';
 import '../ble/ble_device.dart';
 import '../ble/ble_service.dart';
 
+/// Виды ошибок скана — без готового текста, чтобы UI мог локализовать его
+/// сам (см. `AppStrings`). [ScanErrorKind.startFailed] несёт техническую
+/// деталь в [ScanController.errorDetail] (не локализуется — это текст
+/// исключения платформы).
+enum ScanErrorKind { noPermission, bluetoothOff, startFailed }
+
 /// Состояние экрана поиска устройств.
 class ScanController extends ChangeNotifier {
   ScanController(this._ble) {
@@ -24,11 +30,16 @@ class ScanController extends ChangeNotifier {
   final Map<String, DiscoveredDevice> _devices = {};
   BleAvailability _availability = BleAvailability.unknown;
   bool _scanning = false;
-  String? _error;
+  ScanErrorKind? _errorKind;
+  String? _errorDetail;
 
   BleAvailability get availability => _availability;
   bool get isScanning => _scanning;
-  String? get error => _error;
+  ScanErrorKind? get errorKind => _errorKind;
+
+  /// Техническая деталь для [ScanErrorKind.startFailed] (текст исключения
+  /// платформы) — `null` для остальных видов ошибок.
+  String? get errorDetail => _errorDetail;
 
   /// Поддерживаемые контроллеры сверху, затем — по убыванию уровня сигнала.
   List<DiscoveredDevice> get devices {
@@ -57,18 +68,19 @@ class ScanController extends ChangeNotifier {
   Future<void> toggleScan() => _scanning ? stopScan() : startScan();
 
   Future<void> startScan() async {
-    _error = null;
+    _errorKind = null;
+    _errorDetail = null;
     await _refreshAvailability();
     if (_availability != BleAvailability.ready) {
       final ok = await _ble.ensurePermissions();
       await _refreshAvailability();
       if (!ok && _availability == BleAvailability.unauthorized) {
-        _error = 'Нет разрешения на Bluetooth';
+        _errorKind = ScanErrorKind.noPermission;
         notifyListeners();
         return;
       }
       if (_availability == BleAvailability.poweredOff) {
-        _error = 'Bluetooth выключен';
+        _errorKind = ScanErrorKind.bluetoothOff;
         notifyListeners();
         return;
       }
@@ -82,7 +94,8 @@ class ScanController extends ChangeNotifier {
           Timer.periodic(const Duration(seconds: 3), (_) => _pruneStale());
       notifyListeners();
     } catch (e) {
-      _error = 'Не удалось запустить поиск: $e';
+      _errorKind = ScanErrorKind.startFailed;
+      _errorDetail = '$e';
       _scanning = false;
       notifyListeners();
     }

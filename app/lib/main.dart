@@ -1,9 +1,13 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'app.dart';
 import 'ble/ble_service.dart';
+import 'l10n/app_locale.dart';
+import 'l10n/locale_controller.dart';
 import 'state/devices_manager.dart';
 import 'state/prefs.dart';
 import 'state/scan_controller.dart';
@@ -14,6 +18,10 @@ Future<void> main() async {
 
   final prefs = await Prefs.load();
   final ble = BleService();
+  final systemLocale = AppLocale.fromLanguageCode(
+    PlatformDispatcher.instance.locale.languageCode,
+  );
+  final localeController = LocaleController(prefs, systemLocale: systemLocale);
 
   runApp(
     MultiProvider(
@@ -27,7 +35,10 @@ Future<void> main() async {
           create: (_) => DevicesManager(prefs),
         ),
       ],
-      child: const ChromifyApp(),
+      child: LocaleControllerScope(
+        controller: localeController,
+        child: const ChromifyApp(),
+      ),
     ),
   );
 }

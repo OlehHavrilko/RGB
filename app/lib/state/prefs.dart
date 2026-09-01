@@ -20,6 +20,7 @@ class Prefs {
   static const _kSleepAtPrefix = 'sleep_at_epoch_ms:';
   static const _kSchedulesPrefix = 'schedules_v1:';
   static const _kSunriseAlarmsPrefix = 'sunrise_alarms_v1:';
+  static const _kLocale = 'locale_v1';
 
   // ───────────────────────────── известные устройства ──────────────────────
 
@@ -113,4 +114,12 @@ class Prefs {
 
   Future<void> setSunriseAlarmsRaw(String deviceId, List<String> raw) =>
       _prefs.setStringList('$_kSunriseAlarmsPrefix$deviceId', raw);
+
+  // ─────────────────────────── язык интерфейса ─────────────────────────────
+
+  /// Код языка, выбранный пользователем ('ru'/'en'), либо `null`, если
+  /// пользователь ничего не выбирал — тогда действует язык системы.
+  String? get localeCode => _prefs.getString(_kLocale);
+
+  Future<void> setLocaleCode(String code) => _prefs.setString(_kLocale, code);
 }
