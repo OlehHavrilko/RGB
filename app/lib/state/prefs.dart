@@ -19,6 +19,7 @@ class Prefs {
   static const _kDeviceStatePrefix = 'device_state_v1:';
   static const _kSleepAtPrefix = 'sleep_at_epoch_ms:';
   static const _kSchedulesPrefix = 'schedules_v1:';
+  static const _kSunriseAlarmsPrefix = 'sunrise_alarms_v1:';
 
   // ───────────────────────────── известные устройства ──────────────────────
 
@@ -52,6 +53,7 @@ class Prefs {
     await _prefs.remove('$_kDeviceStatePrefix$id');
     await _prefs.remove('$_kSleepAtPrefix$id');
     await _prefs.remove('$_kSchedulesPrefix$id');
+    await _prefs.remove('$_kSunriseAlarmsPrefix$id');
   }
 
   // ─────────────────────────────── пресеты (общие) ─────────────────────────
@@ -102,4 +104,13 @@ class Prefs {
 
   Future<void> setSchedulesRaw(String deviceId, List<String> raw) =>
       _prefs.setStringList('$_kSchedulesPrefix$deviceId', raw);
+
+  // ──────────────────────────── будильник-рассвет ──────────────────────────
+
+  List<String> sunriseAlarmsRaw(String deviceId) =>
+      _prefs.getStringList('$_kSunriseAlarmsPrefix$deviceId') ??
+      const <String>[];
+
+  Future<void> setSunriseAlarmsRaw(String deviceId, List<String> raw) =>
+      _prefs.setStringList('$_kSunriseAlarmsPrefix$deviceId', raw);
 }

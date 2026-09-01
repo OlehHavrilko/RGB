@@ -4,10 +4,12 @@ import 'package:flutter/foundation.dart';
 
 import 'daily_schedule.dart';
 import 'device_controller.dart';
+import 'led_state.dart';
 import 'prefs.dart';
+import 'sunrise_alarm.dart';
 
-/// Локальный планировщик: таймер сна (одноразовое автоотключение) и
-/// ежедневные расписания включения/выключения.
+/// Локальный планировщик: таймер сна (одноразовое автоотключение),
+/// ежедневные расписания включения/выключения и будильники-рассветы.
 ///
 /// Работает, пока приложение запущено. Срабатывания, пропущенные при
 /// закрытом приложении, не навёрстываются (кроме истёкшего таймера сна —
@@ -25,6 +27,11 @@ class ScheduleController extends ChangeNotifier {
         .whereType<DailySchedule>()
         .toList()
       ..sort((a, b) => a.minuteOfDay.compareTo(b.minuteOfDay));
+    _sunriseAlarms = _prefs.sunriseAlarmsRaw(_device.id)
+        .map(SunriseAlarm.decode)
+        .whereType<SunriseAlarm>()
+        .toList()
+      ..sort((a, b) => a.minuteOfDay.compareTo(b.minuteOfDay));
     _lastTick = DateTime.now();
     _timer = Timer.periodic(tick, (_) => _onTick());
     _onTick(); // догнать истёкший таймер сна сразу после запуска
@@ -37,6 +44,11 @@ class ScheduleController extends ChangeNotifier {
   DateTime _lastTick = DateTime.now();
   DateTime? _sleepAt;
   List<DailySchedule> _schedules = const [];
+  List<SunriseAlarm> _sunriseAlarms = const [];
+
+  /// id рассветов, для которых уже отправлена начальная команда
+  /// включения в текущем окне — чтобы не слать её на каждый тик.
+  final Set<String> _activeSunrises = {};
 
   // ─────────────────────────────── таймер сна ──────────────────────────────
 
@@ -110,6 +122,56 @@ class ScheduleController extends ChangeNotifier {
   Future<void> _persist() =>
       _prefs.setSchedulesRaw(_device.id, _schedules.map((s) => s.encode()).toList());
 
+  // ───────────────────────────── будильник-рассвет ─────────────────────────
+
+  List<SunriseAlarm> get sunriseAlarms => List.unmodifiable(_sunriseAlarms);
+
+  Future<void> addSunriseAlarm({
+    required int minuteOfDay,
+    int durationMinutes = 15,
+    int targetBrightness = 80,
+  }) async {
+    final alarm = SunriseAlarm(
+      id: DateTime.now().microsecondsSinceEpoch.toRadixString(36),
+      minuteOfDay: minuteOfDay.clamp(0, 1439),
+      durationMinutes: durationMinutes,
+      targetBrightness: targetBrightness,
+    );
+    _sunriseAlarms = [..._sunriseAlarms, alarm]
+      ..sort((a, b) => a.minuteOfDay.compareTo(b.minuteOfDay));
+    notifyListeners();
+    await _persistSunriseAlarms();
+  }
+
+  Future<void> updateSunriseAlarm(SunriseAlarm updated) async {
+    _sunriseAlarms = [
+      for (final a in _sunriseAlarms) a.id == updated.id ? updated : a,
+    ]..sort((a, b) => a.minuteOfDay.compareTo(b.minuteOfDay));
+    notifyListeners();
+    await _persistSunriseAlarms();
+  }
+
+  Future<void> toggleSunriseAlarm(String id) async {
+    SunriseAlarm? target;
+    for (final a in _sunriseAlarms) {
+      if (a.id == id) target = a;
+    }
+    if (target == null) return;
+    await updateSunriseAlarm(target.copyWith(enabled: !target.enabled));
+  }
+
+  Future<void> deleteSunriseAlarm(String id) async {
+    final next = _sunriseAlarms.where((a) => a.id != id).toList();
+    if (next.length == _sunriseAlarms.length) return;
+    _sunriseAlarms = next;
+    _activeSunrises.remove(id);
+    notifyListeners();
+    await _persistSunriseAlarms();
+  }
+
+  Future<void> _persistSunriseAlarms() => _prefs.setSunriseAlarmsRaw(
+      _device.id, _sunriseAlarms.map((a) => a.encode()).toList());
+
   // ──────────────────────────────────── тик ────────────────────────────────
 
   void _onTick() {
@@ -129,6 +191,22 @@ class ScheduleController extends ChangeNotifier {
       if (sch.firesBetween(prev, now)) {
         _device.setPower(sch.turnOn);
       }
+    }
+
+    for (final alarm in _sunriseAlarms) {
+      final progress = alarm.progressAt(now);
+      if (progress == null) {
+        _activeSunrises.remove(alarm.id);
+        continue;
+      }
+      if (_activeSunrises.add(alarm.id)) {
+        // Начало окна рассвета: один раз включаем ленту в тёплом белом —
+        // дальше на каждый тик только поднимаем яркость.
+        _device.setMode(LedMode.white);
+        _device.setWhite(80);
+        _device.setPower(true);
+      }
+      _device.setBrightness(alarm.brightnessAt(progress), commit: true);
     }
   }
 
