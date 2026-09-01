@@ -3,7 +3,9 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 
 import '../../state/device_controller.dart';
+import '../../state/devices_manager.dart';
 import '../../state/led_state.dart';
+import '../../state/schedule_controller.dart';
 import '../theme/app_colors.dart';
 import '../theme/motion.dart';
 import '../widgets/ambient_background.dart';
@@ -23,8 +25,36 @@ import 'rgb_sliders.dart';
 import 'sleep_timer_section.dart';
 import 'white_tab.dart';
 
+/// Экран управления конкретным устройством, найденным по [deviceId].
+///
+/// Оборачивает поддерево в провайдеры конкретных [DeviceController] и
+/// [ScheduleController] из [DevicesManager] — все дочерние секции
+/// (пресеты, таймер сна, расписания) продолжают читать их через обычный
+/// `context.watch`, не зная о многодевайсности.
 class ControlScreen extends StatelessWidget {
-  const ControlScreen({super.key});
+  const ControlScreen({super.key, required this.deviceId});
+
+  final String deviceId;
+
+  @override
+  Widget build(BuildContext context) {
+    final manager = context.watch<DevicesManager>();
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<DeviceController>.value(
+          value: manager.controllerFor(deviceId),
+        ),
+        ChangeNotifierProvider<ScheduleController>.value(
+          value: manager.scheduleFor(deviceId),
+        ),
+      ],
+      child: const _ControlScreenBody(),
+    );
+  }
+}
+
+class _ControlScreenBody extends StatelessWidget {
+  const _ControlScreenBody();
 
   static const _quickColors = [
     Color(0xFFFF3B30),
@@ -56,11 +86,11 @@ class ControlScreen extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                   child: Column(
                     children: [
-                      _TopBar(deviceName: ctrl.device?.displayName ?? 'Контроллер'),
+                      _TopBar(deviceName: ctrl.name),
                       const SizedBox(height: 12),
                       ConnectionBanner(
                         state: ctrl.linkState,
-                        deviceName: ctrl.device?.id ?? '',
+                        deviceName: ctrl.id,
                         onReconnect: ctrl.reconnect,
                         onDisconnect: () {
                           ctrl.disconnect();
@@ -319,7 +349,7 @@ class _ColorPanel extends StatelessWidget {
                 spacing: 10,
                 runSpacing: 10,
                 children: [
-                  for (final c in ControlScreen._quickColors)
+                  for (final c in _ControlScreenBody._quickColors)
                     Pressable(
                       onTap: () => ctrl.setColor(c, commit: true),
                       borderRadius: BorderRadius.circular(20),

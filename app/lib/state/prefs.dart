@@ -1,7 +1,11 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Тонкая обёртка над [SharedPreferences]: последнее устройство, список
-/// пользовательских пресетов и последнее состояние ленты.
+import 'known_device.dart';
+
+/// Тонкая обёртка над [SharedPreferences]: список известных устройств и,
+/// для каждого из них по отдельности (ключи с суффиксом `:<id>`) —
+/// последнее состояние ленты, таймер сна и расписания. Пресеты — общая
+/// библиотека на всё приложение, не привязана к конкретному устройству.
 class Prefs {
   Prefs(this._prefs);
 
@@ -9,27 +13,47 @@ class Prefs {
 
   static Future<Prefs> load() async => Prefs(await SharedPreferences.getInstance());
 
-  static const _kLastDeviceId = 'last_device_id';
-  static const _kLastDeviceName = 'last_device_name';
+  static const _kKnownDevices = 'known_devices_v1';
   static const _kPresets = 'presets_v1';
-  static const _kLastState = 'last_led_state_v1';
-  static const _kSleepAt = 'sleep_at_epoch_ms';
-  static const _kSchedules = 'schedules_v1';
+  static const _kDeviceStatePrefix = 'device_state_v1:';
+  static const _kSleepAtPrefix = 'sleep_at_epoch_ms:';
+  static const _kSchedulesPrefix = 'schedules_v1:';
 
-  String? get lastDeviceId => _prefs.getString(_kLastDeviceId);
-  String? get lastDeviceName => _prefs.getString(_kLastDeviceName);
+  // ───────────────────────────── известные устройства ──────────────────────
 
-  Future<void> setLastDevice(String id, String name) async {
-    await _prefs.setString(_kLastDeviceId, id);
-    await _prefs.setString(_kLastDeviceName, name);
+  /// Все устройства, к которым когда-либо подключались, в порядке
+  /// «последнее использованное — первым».
+  List<KnownDevice> get knownDevices => (_prefs.getStringList(_kKnownDevices) ??
+          const <String>[])
+      .map(KnownDevice.decode)
+      .whereType<KnownDevice>()
+      .toList();
+
+  /// Добавляет устройство в начало списка известных (или поднимает его туда,
+  /// если оно уже есть) и обновляет отображаемое имя.
+  Future<void> touchKnownDevice(String id, String name) async {
+    final next = [
+      KnownDevice(id: id, name: name),
+      ...knownDevices.where((d) => d.id != id),
+    ];
+    await _prefs.setStringList(
+      _kKnownDevices,
+      next.map((d) => d.encode()).toList(),
+    );
   }
 
-  Future<void> clearLastDevice() async {
-    await _prefs.remove(_kLastDeviceId);
-    await _prefs.remove(_kLastDeviceName);
+  Future<void> removeKnownDevice(String id) async {
+    final next = knownDevices.where((d) => d.id != id).toList();
+    await _prefs.setStringList(
+      _kKnownDevices,
+      next.map((d) => d.encode()).toList(),
+    );
+    await _prefs.remove('$_kDeviceStatePrefix$id');
+    await _prefs.remove('$_kSleepAtPrefix$id');
+    await _prefs.remove('$_kSchedulesPrefix$id');
   }
 
-  // ─────────────────────────────── пресеты ─────────────────────────────────
+  // ─────────────────────────────── пресеты (общие) ─────────────────────────
 
   /// Список пресетов, каждый — отдельная JSON-строка.
   List<String> get presetsRaw =>
@@ -40,29 +64,32 @@ class Prefs {
 
   // ──────────────────────── последнее состояние ленты ──────────────────────
 
-  String? get lastStateRaw => _prefs.getString(_kLastState);
+  String? deviceStateRaw(String deviceId) =>
+      _prefs.getString('$_kDeviceStatePrefix$deviceId');
 
-  Future<void> setLastStateRaw(String raw) =>
-      _prefs.setString(_kLastState, raw);
+  Future<void> setDeviceStateRaw(String deviceId, String raw) =>
+      _prefs.setString('$_kDeviceStatePrefix$deviceId', raw);
 
   // ──────────────────────────── таймер сна ────────────────────────────────
 
   /// Абсолютное время автоотключения (epoch ms) либо `null`.
-  int? get sleepAtEpochMs => _prefs.getInt(_kSleepAt);
+  int? sleepAtEpochMs(String deviceId) =>
+      _prefs.getInt('$_kSleepAtPrefix$deviceId');
 
-  Future<void> setSleepAtEpochMs(int? value) async {
+  Future<void> setSleepAtEpochMs(String deviceId, int? value) async {
+    final key = '$_kSleepAtPrefix$deviceId';
     if (value == null) {
-      await _prefs.remove(_kSleepAt);
+      await _prefs.remove(key);
     } else {
-      await _prefs.setInt(_kSleepAt, value);
+      await _prefs.setInt(key, value);
     }
   }
 
   // ─────────────────────────── расписание ─────────────────────────────────
 
-  List<String> get schedulesRaw =>
-      _prefs.getStringList(_kSchedules) ?? const <String>[];
+  List<String> schedulesRaw(String deviceId) =>
+      _prefs.getStringList('$_kSchedulesPrefix$deviceId') ?? const <String>[];
 
-  Future<void> setSchedulesRaw(List<String> raw) =>
-      _prefs.setStringList(_kSchedules, raw);
+  Future<void> setSchedulesRaw(String deviceId, List<String> raw) =>
+      _prefs.setStringList('$_kSchedulesPrefix$deviceId', raw);
 }
