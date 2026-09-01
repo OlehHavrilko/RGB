@@ -32,6 +32,12 @@ set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS_RELEASE}")
 # Use Unicode for all projects.
 add_definitions(-DUNICODE -D_UNICODE)
 
+# permission_handler_windows (0.2.2, latest as of writing) still includes
+# <experimental/coroutine>, which newer MSVC toolchains (VS 2022 17.14+)
+# treat as a hard compile error instead of a deprecation warning. No fix has
+# shipped upstream yet — silence it globally so plugin builds succeed.
+add_definitions(-D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
+
 # Compilation settings that should be applied to most targets.
 #
 # Be cautious about adding new options here, as plugins use this function by
