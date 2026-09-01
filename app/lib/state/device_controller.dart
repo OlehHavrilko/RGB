@@ -8,6 +8,7 @@ import '../ble/ble_device.dart';
 import '../protocol/elk_bledom_codec.dart';
 import '../protocol/status_parser.dart';
 import 'debouncer.dart';
+import 'led_preset.dart';
 import 'led_state.dart';
 import 'prefs.dart';
 
@@ -16,7 +17,16 @@ import 'prefs.dart';
 /// Интерфейс обновляется оптимистично, команды в BLE уходят с ограничением
 /// частоты ([Debouncer]) — чтобы перетаскивание ползунков не забивало канал.
 class DeviceController extends ChangeNotifier {
-  DeviceController(this._prefs);
+  DeviceController(this._prefs) {
+    final restored = _prefs.lastStateRaw;
+    if (restored != null) {
+      _led = LedState.tryDecode(restored) ?? const LedState();
+    }
+    _presets = _prefs.presetsRaw
+        .map(LedPreset.decode)
+        .whereType<LedPreset>()
+        .toList();
+  }
 
   final Prefs _prefs;
 
@@ -27,12 +37,14 @@ class DeviceController extends ChangeNotifier {
   DiscoveredDevice? _device;
   LinkState _linkState = LinkState.disconnected;
   LedState _led = const LedState();
+  List<LedPreset> _presets = const [];
   DateTime _lastUserAction = DateTime.fromMillisecondsSinceEpoch(0);
 
   final _colorDebounce = Debouncer(const Duration(milliseconds: 70));
   final _brightnessDebounce = Debouncer(const Duration(milliseconds: 70));
   final _whiteDebounce = Debouncer(const Duration(milliseconds: 70));
   final _speedDebounce = Debouncer(const Duration(milliseconds: 90));
+  final _saveDebounce = Debouncer(const Duration(milliseconds: 400));
 
   DiscoveredDevice? get device => _device;
   LinkState get linkState => _linkState;
@@ -45,6 +57,8 @@ class DeviceController extends ChangeNotifier {
 
   String? get lastKnownDeviceName => _prefs.lastDeviceName;
   String? get lastKnownDeviceId => _prefs.lastDeviceId;
+
+  List<LedPreset> get presets => List.unmodifiable(_presets);
 
   // ─────────────────────────────── соединение ───────────────────────────────
 
@@ -129,7 +143,10 @@ class DeviceController extends ChangeNotifier {
 
   // ──────────────────────────────── команды ────────────────────────────────
 
-  void _touch() => _lastUserAction = DateTime.now();
+  void _touch() {
+    _lastUserAction = DateTime.now();
+    _saveDebounce(() => _prefs.setLastStateRaw(_led.encode()));
+  }
 
   Future<void> _send(Uint8List frame) async {
     await _conn?.sendFrame(frame);
@@ -149,7 +166,7 @@ class DeviceController extends ChangeNotifier {
     _touch();
     _led = _led.copyWith(color: color, mode: LedMode.color, clearEffect: true);
     notifyListeners();
-    void run() => _sendColorScaled();
+    void run() => _sendColor();
     if (commit) {
       _colorDebounce.flushNow();
       run();
@@ -162,10 +179,9 @@ class DeviceController extends ChangeNotifier {
     _touch();
     _led = _led.copyWith(brightness: percent.clamp(0, 100));
     notifyListeners();
-    void run() {
-      _send(ElkBledomCodec.brightness(_led.brightness));
-      _pushActiveChannel();
-    }
+    // Яркость — единственный рычаг затемнения: регистр `7E 00 01 XX`.
+    // Цвет при этом уходит на полной величине (см. [_sendColor]).
+    void run() => _send(ElkBledomCodec.brightness(_led.brightness));
 
     if (commit) {
       _brightnessDebounce.flushNow();
@@ -218,6 +234,64 @@ class DeviceController extends ChangeNotifier {
     }
   }
 
+  // ──────────────────────────────── пресеты ────────────────────────────────
+
+  /// Сохранить текущий режим/цвет/яркость/эффект как новый пресет.
+  Future<void> saveCurrentAsPreset(String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+    final preset = LedPreset(
+      id: DateTime.now().microsecondsSinceEpoch.toRadixString(36),
+      name: trimmed,
+      state: _led,
+    );
+    _presets = [..._presets, preset];
+    notifyListeners();
+    await _persistPresets();
+  }
+
+  Future<void> deletePreset(String id) async {
+    final next = _presets.where((p) => p.id != id).toList();
+    if (next.length == _presets.length) return;
+    _presets = next;
+    notifyListeners();
+    await _persistPresets();
+  }
+
+  Future<void> renamePreset(String id, String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+    _presets = [
+      for (final p in _presets) p.id == id ? p.copyWith(name: trimmed) : p,
+    ];
+    notifyListeners();
+    await _persistPresets();
+  }
+
+  /// Применить пресет: переносит режим/цвет/яркость/эффект (питание не
+  /// трогаем) и, если лента включена, сразу шлёт команды на контроллер.
+  void applyPreset(LedPreset preset) {
+    _touch();
+    final s = preset.state;
+    _led = _led.copyWith(
+      color: s.color,
+      brightness: s.brightness,
+      mode: s.mode,
+      warm: s.warm,
+      effectId: s.effectId,
+      clearEffect: s.effectId == null,
+      effectSpeed: s.effectSpeed,
+    );
+    notifyListeners();
+    if (_led.power) {
+      _send(ElkBledomCodec.brightness(_led.brightness));
+      _pushActiveChannel();
+    }
+  }
+
+  Future<void> _persistPresets() =>
+      _prefs.setPresetsRaw(_presets.map((p) => p.encode()).toList());
+
   /// Переслать ленте всё текущее состояние (после подключения).
   void _pushFullState() {
     _send(ElkBledomCodec.power(_led.power));
@@ -230,7 +304,7 @@ class DeviceController extends ChangeNotifier {
   void _pushActiveChannel() {
     switch (_led.mode) {
       case LedMode.color:
-        _sendColorScaled();
+        _sendColor();
       case LedMode.white:
         _send(ElkBledomCodec.white(_led.warm));
       case LedMode.effect:
@@ -242,15 +316,16 @@ class DeviceController extends ChangeNotifier {
     }
   }
 
-  /// Цвет отправляем уже затемнённым под текущую яркость — так стабильнее
-  /// ведут себя разные прошивки ELK-BLEDOM.
-  void _sendColorScaled() {
+  /// Цвет уходит на полной величине; затемнение делает регистр яркости
+  /// (`ElkBledomCodec.brightness`). Раньше здесь было ещё и умножение RGB на
+  /// `brightness/100`, из-за чего на прошивках, честно применяющих регистр,
+  /// затемнение получалось квадратичным (50 % ⇒ ≈25 %).
+  void _sendColor() {
     final c = _led.color;
-    final k = _led.brightness / 100.0;
     _send(ElkBledomCodec.color(
-      (c.r * 255 * k).round(),
-      (c.g * 255 * k).round(),
-      (c.b * 255 * k).round(),
+      (c.r * 255).round(),
+      (c.g * 255).round(),
+      (c.b * 255).round(),
     ));
   }
 
@@ -260,6 +335,8 @@ class DeviceController extends ChangeNotifier {
     _brightnessDebounce.dispose();
     _whiteDebounce.dispose();
     _speedDebounce.dispose();
+    _saveDebounce.flushNow();
+    _saveDebounce.dispose();
     unawaited(_teardownConnection());
     super.dispose();
   }

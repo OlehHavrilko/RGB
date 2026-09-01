@@ -1,7 +1,15 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 /// Активный режим вывода ленты.
 enum LedMode { color, white, effect }
+
+int _clampInt(Object? v, int lo, int hi, int fallback) {
+  if (v is int) return v.clamp(lo, hi);
+  if (v is num) return v.round().clamp(lo, hi);
+  return fallback;
+}
 
 /// Полное состояние ленты, отражаемое интерфейсом.
 ///
@@ -72,6 +80,55 @@ class LedState {
       (color.g * 255 * brightness / 100).round(),
       (color.b * 255 * brightness / 100).round(),
     );
+  }
+
+  // ─────────────────────────────── сериализация ────────────────────────────
+  //
+  // Используется и для пользовательских пресетов, и для «запомнить последний
+  // режим». Разбор устойчив к битым/отсутствующим полям — любое из них
+  // откатывается к значению по умолчанию.
+
+  Map<String, dynamic> toJson() => {
+        'power': power,
+        'color': color.toARGB32(),
+        'brightness': brightness,
+        'mode': mode.name,
+        'warm': warm,
+        'effectId': effectId,
+        'effectSpeed': effectSpeed,
+      };
+
+  factory LedState.fromJson(Map<String, dynamic> json) {
+    const fallback = LedState();
+    final mode = LedMode.values.firstWhere(
+      (m) => m.name == json['mode'],
+      orElse: () => fallback.mode,
+    );
+    final rawColor = json['color'];
+    final color =
+        rawColor is int ? Color(rawColor | 0xFF000000) : fallback.color;
+    final rawEffect = json['effectId'];
+    final effectId = rawEffect is int ? rawEffect & 0xFF : null;
+    return LedState(
+      power: json['power'] is bool ? json['power'] as bool : fallback.power,
+      color: color,
+      brightness: _clampInt(json['brightness'], 0, 100, fallback.brightness),
+      mode: mode,
+      warm: _clampInt(json['warm'], 0, 100, fallback.warm),
+      effectId: effectId,
+      effectSpeed: _clampInt(json['effectSpeed'], 0, 100, fallback.effectSpeed),
+    );
+  }
+
+  String encode() => jsonEncode(toJson());
+
+  static LedState? tryDecode(String raw) {
+    try {
+      final obj = jsonDecode(raw);
+      return obj is Map ? LedState.fromJson(obj.cast<String, dynamic>()) : null;
+    } catch (_) {
+      return null;
+    }
   }
 
   @override

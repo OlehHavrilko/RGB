@@ -16,6 +16,7 @@ import 'connection_banner.dart';
 import 'effects_section.dart';
 import 'mode_switcher.dart';
 import 'power_orb.dart';
+import 'presets_section.dart';
 import 'rgb_sliders.dart';
 import 'white_tab.dart';
 
@@ -111,6 +112,8 @@ class ControlScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      const PresetsSection(),
+                      const SizedBox(height: 20),
                       const SectionHeader('Яркость'),
                       GlassCard(
                         child: BrightnessSlider(

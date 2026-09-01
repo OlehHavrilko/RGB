@@ -19,7 +19,8 @@ class Debouncer {
       return;
     }
     _pending = action;
-    _timer ??= Timer(interval - sinceLast, _flush);
+    final wait = interval - sinceLast;
+    _timer ??= Timer(wait.isNegative ? Duration.zero : wait, _flush);
   }
 
   void _flush() {

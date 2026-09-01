@@ -31,12 +31,16 @@ class _ScanScreenState extends State<ScanScreen> {
     });
   }
 
-  void _openControl(DiscoveredDevice device) {
+  Future<void> _openControl(DiscoveredDevice device) async {
+    final scan = context.read<ScanController>();
     context.read<DeviceController>().connectTo(device);
-    context.read<ScanController>().stopScan();
-    Navigator.of(context).push(
+    await scan.stopScan();
+    if (!mounted) return;
+    await Navigator.of(context).push(
       FadeThroughPageRoute<void>(page: const ControlScreen()),
     );
+    // Вернулись с экрана управления — возобновляем поиск, иначе список пуст.
+    if (mounted) scan.startScan();
   }
 
   @override
