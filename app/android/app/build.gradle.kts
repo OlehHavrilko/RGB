@@ -6,7 +6,8 @@ plugins {
 
 android {
     namespace = "com.oleh.rgb_controller"
-    compileSdk = flutter.compileSdkVersion
+    // permission_handler_android requires compileSdk 37; flutter.compileSdkVersion is still 36.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
