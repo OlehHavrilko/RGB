@@ -34,6 +34,7 @@ class ElkConnection {
 
   String? _writeService;
   String? _writeChar;
+  bool _writeWithoutResponse = true;
 
   StreamSubscription<bool>? _connSub;
   StreamSubscription<Uint8List>? _notifySub;
@@ -90,6 +91,7 @@ class ElkConnection {
       }
       _writeService = write.service;
       _writeChar = write.characteristic;
+      _writeWithoutResponse = write.withoutResponse;
 
       final notify = ElkEndpoints.resolveNotify(services);
       if (notify != null) {
@@ -167,7 +169,7 @@ class ElkConnection {
         service,
         characteristic,
         frame,
-        withoutResponse: true,
+        withoutResponse: _writeWithoutResponse,
       );
     } catch (e) {
       debugPrint('ElkConnection write error: $e');
