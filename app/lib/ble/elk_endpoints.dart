@@ -23,27 +23,41 @@ class ElkEndpoints {
   /// Найти пару (service, characteristic) для записи команд.
   ///
   /// Сначала пробуем каноничные `fff0/fff3`, затем — любой сервис `fffX`
-  /// с характеристикой, поддерживающей запись без ответа.
-  static ({String service, String characteristic})? resolveWrite(
-    List<BleService> services,
-  ) {
+  /// с характеристикой, поддерживающей запись (с ответом или без).
+  ///
+  /// [withoutResponse] в результате говорит, каким типом записи реально
+  /// нужно писать в эту characteristic: клоны ELK-BLEDOM не всегда
+  /// объявляют `writeWithoutResponse` на `fff3`, и запись неверным типом
+  /// на части Android-стеков тихо не доходит до ленты — соединение при
+  /// этом выглядит установленным.
+  static ({String service, String characteristic, bool withoutResponse})?
+      resolveWrite(List<BleService> services) {
     for (final s in services) {
       if (!_uuidContains(s.uuid, 'fff0')) continue;
       for (final c in s.characteristics) {
         if (_uuidContains(c.uuid, writeUuid)) {
-          return (service: s.uuid, characteristic: c.uuid);
+          return (
+            service: s.uuid,
+            characteristic: c.uuid,
+            withoutResponse: c.properties
+                .contains(CharacteristicProperty.writeWithoutResponse),
+          );
         }
       }
     }
     for (final s in services) {
       if (!_uuidContains(s.uuid, 'fff')) continue;
       for (final c in s.characteristics) {
-        final writable = c.properties.contains(
-              CharacteristicProperty.writeWithoutResponse,
-            ) ||
+        final noResponse = c.properties
+            .contains(CharacteristicProperty.writeWithoutResponse);
+        final withResponse =
             c.properties.contains(CharacteristicProperty.write);
-        if (writable) {
-          return (service: s.uuid, characteristic: c.uuid);
+        if (noResponse || withResponse) {
+          return (
+            service: s.uuid,
+            characteristic: c.uuid,
+            withoutResponse: noResponse,
+          );
         }
       }
     }
